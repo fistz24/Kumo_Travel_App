@@ -241,114 +241,6 @@ function CityDialog({ onOk, onNo, palette }) {
 }
 
 // ─── TRIP SELECTOR ────────────────────────────────────────────────────────────
-function TripSelector({ trips, onSelect, onCreate, onImport, palette }) {
-  const fileRef = useRef();
-  const [dragging, setDragging] = useState(false);
-
-  const parseAndCreate = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const wb = XLSX.read(e.target.result, {type:"binary"});
-        const sheets = {};
-        wb.SheetNames.forEach(n => { sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], {defval:""}); });
-        onImport(parseExcelSheets(sheets));
-      } catch(err) {
-        console.error("Import error:", err);
-        alert("Could not read file. Open browser console (F12) for details.");
-      }
-    };
-    reader.readAsBinaryString(file);
-  };
-
-  const tripStatus = (t) => {
-    const du = daysUntil(t.startDate);
-    if (du > 0) return {label:`In ${du} days`,color:"#8A6200",bg:"#FFF3DC"};
-    if (du === 0) return {label:"Today!",color:"#fff",bg:"#C97B84"};
-    if (daysUntil(t.endDate) >= 0) return {label:"Ongoing",color:"#3A6B42",bg:"#DFF0E1"};
-    return {label:"Completed",color:"#6A6060",bg:"#F1EFEF"};
-  };
-
-  return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#FAF7F8 0%,#F2DDE1 100%)",fontFamily:"'DM Sans',sans-serif"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
-      <div style={{padding:"44px 24px 0"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
-          <span style={{fontSize:38}}>☁️</span>
-          <div>
-            <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:28,fontWeight:700,color:"#2D2426",margin:0}}>Kumo Travel</h1>
-            <p style={{color:"#9A8F92",fontSize:13,margin:0}}>All your trips in one place</p>
-          </div>
-        </div>
-      </div>
-
-      <div style={{padding:"28px 24px 60px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-          <button onClick={onCreate} style={{background:palette.primary,color:"#fff",border:"none",borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-            <Plus size={22}/>New Trip
-          </button>
-          <button
-            onClick={()=>fileRef.current.click()}
-            onDragOver={e=>{e.preventDefault();setDragging(true);}}
-            onDragLeave={()=>setDragging(false)}
-            onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)parseAndCreate(f);}}
-            style={{background:dragging?palette.primaryLight:"#fff",color:palette.primary,border:`2px dashed ${palette.primary}`,borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-            <Upload size={22}/>Import Excel
-          </button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>{if(e.target.files[0])parseAndCreate(e.target.files[0]);}}/>
-        </div>
-
-        {trips.length===0 && (
-          <>
-            <button onClick={()=>onImport({...DEMO_TRIP,id:uid()})} style={{width:"100%",background:"#fff",color:"#9A8F92",border:"1px solid #EDE5E7",borderRadius:14,padding:"13px",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:28}}>
-              ✈️ Load Japan demo trip
-            </button>
-            <div style={{textAlign:"center",padding:"20px 0",color:"#9A8F92"}}>
-              <div style={{fontSize:48,marginBottom:12}}>🗺️</div>
-              <p style={{fontSize:16,fontWeight:700,color:"#2D2426",margin:"0 0 6px"}}>No trips yet</p>
-              <p style={{fontSize:13}}>Create a new trip or import your Excel planner above</p>
-            </div>
-          </>
-        )}
-
-        {trips.length>0 && (
-          <>
-            <p style={{fontSize:11,fontWeight:800,color:"#9A8F92",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 12px"}}>Your Trips ({trips.length})</p>
-            {trips.map(trip=>{
-              const st = tripStatus(trip);
-              const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
-              return (
-                <div key={trip.id} onClick={()=>onSelect(trip.id)}
-                  style={{background:"#fff",borderRadius:20,border:"1px solid #EDE5E7",padding:"18px 20px",marginBottom:12,cursor:"pointer",boxShadow:"0 2px 14px rgba(0,0,0,0.05)",transition:"transform 0.15s"}}
-                  onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
-                  onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-                  <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                    <div>
-                      <h3 style={{fontSize:17,fontWeight:700,color:"#2D2426",margin:"0 0 3px",fontFamily:"'Playfair Display',Georgia,serif"}}>{trip.tripName}</h3>
-                      <p style={{fontSize:12,color:"#9A8F92",margin:0}}>{fmtDateShort(trip.startDate)} — {fmtDateShort(trip.endDate)}</p>
-                    </div>
-                    <span style={{background:st.bg,color:st.color,fontSize:10,fontWeight:800,padding:"4px 10px",borderRadius:99,flexShrink:0}}>{st.label}</span>
-                  </div>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                    {cities.slice(0,5).map(c=><span key={c} style={{background:cityColor(c)+"20",color:cityColor(c),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99}}>{c}</span>)}
-                    {cities.length>5&&<span style={{fontSize:11,color:"#9A8F92"}}>+{cities.length-5}</span>}
-                  </div>
-                  <div style={{display:"flex",gap:14}}>
-                    {trip.itinerary.length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>📅 {trip.itinerary.length} days</span>}
-                    {(trip.memories||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>📸 {trip.memories.length} memories</span>}
-                    {trip.restaurants.filter(r=>r.name).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>🍜 {trip.restaurants.filter(r=>r.name).length} places</span>}
-                  </div>
-                </div>
-              );
-            })}
-          </>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ─── HOME VIEW ────────────────────────────────────────────────────────────────
 function HomeView({ trip, palette, setView }) {
   const du = daysUntil(trip.startDate);
   const totalDays = nightsBetween(trip.startDate, trip.endDate)+1;
@@ -539,170 +431,6 @@ function ItineraryView({ trip, palette, onUpdate }) {
 }
 
 // ─── RESTAURANTS VIEW ─────────────────────────────────────────────────────────
-function RestaurantsView({ trip, palette, onUpdate }) {
-  const allCities=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];
-  const [city,setCity]=useState(allCities[0]||"");
-  const [search,setSearch]=useState("");
-  const [fSt,setFSt]=useState("all");
-  const [showAdd,setShowAdd]=useState(false);
-  const [showAddCity,setShowAddCity]=useState(false);
-  const [delId,setDelId]=useState(null);
-  const [nr,setNr]=useState({city:allCities[0]||"",name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist"});
-
-  const switchCity=(c)=>{setCity(c);setNr(p=>({...p,city:c}));};
-  useEffect(()=>{const u=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];if(u.length>0&&!u.includes(city))switchCity(u[u.length-1]);},[trip.restaurants]);
-
-  const SO=["wishlist","chosen","visited","skipped"];
-  const cycle=(r)=>{const i=SO.indexOf(r.status);onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,status:SO[(i+1)%SO.length]}:x));};
-  const doDelete=(id)=>{onUpdate("restaurants",trip.restaurants.filter(x=>x.id!==id));setDelId(null);};
-  const addR=()=>{if(!nr.name.trim())return;onUpdate("restaurants",[...trip.restaurants,{...nr,id:uid()}]);setShowAdd(false);setNr({city,name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist"});};
-  const addCity=(name)=>{onUpdate("restaurants",[...trip.restaurants,{id:uid(),city:name,name:"",cuisine:"",price:"",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist"}]);setShowAddCity(false);};
-
-  const filtered=trip.restaurants.filter(r=>r.city===city&&r.name&&(fSt==="all"||r.status===fSt)&&(search===""||r.name.toLowerCase().includes(search.toLowerCase())||(r.cuisine||"").toLowerCase().includes(search.toLowerCase())));
-
-  return (
-    <div style={{padding:"24px 20px 40px"}}>
-      {delId&&<Confirm message="Remove this restaurant?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-      {showAddCity&&<CityDialog onOk={addCity} onNo={()=>setShowAddCity(false)} palette={palette}/>}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Restaurants</h2><p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.restaurants.filter(r=>r.name&&r.status==="wishlist").length} wishlist · {trip.restaurants.filter(r=>r.name&&r.status==="chosen").length} chosen</p></div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add</button>
-      </div>
-
-      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:10,marginBottom:8}}>
-        {allCities.map(c=><button key={c} onClick={()=>switchCity(c)} style={{flexShrink:0,padding:"7px 16px",borderRadius:99,border:"none",fontSize:13,fontWeight:700,cursor:"pointer",background:city===c?palette.primary:palette.primaryLight,color:city===c?"#fff":palette.primary}}>{c}</button>)}
-        <button onClick={()=>setShowAddCity(true)} style={{flexShrink:0,padding:"7px 14px",borderRadius:99,border:`1.5px dashed ${palette.primary}`,background:"transparent",color:palette.primary,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><Plus size={13}/>City</button>
-      </div>
-
-      {showAdd&&(
-        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
-          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Add Restaurant {city?"— "+city:""}</h3>
-          <Inp label="Name" value={nr.name} placeholder="Restaurant name" onChange={v=>setNr(p=>({...p,name:v}))}/>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="Cuisine" value={nr.cuisine} placeholder="e.g. Ramen" onChange={v=>setNr(p=>({...p,cuisine:v}))}/><Inp label="Price" value={nr.price} onChange={v=>setNr(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/></div>
-          <Inp label="Must-try dish" value={nr.mustTry} placeholder="Signature item" onChange={v=>setNr(p=>({...p,mustTry:v}))}/>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="Area" value={nr.area} placeholder="District" onChange={v=>setNr(p=>({...p,area:v}))}/><Inp label="Reservation" value={nr.reservationRequired} onChange={v=>setNr(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/></div>
-          <Inp label="Notes" value={nr.notes} placeholder="Hours, tips…" onChange={v=>setNr(p=>({...p,notes:v}))} multi rows={2}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={addR} disabled={!nr.name.trim()} style={{flex:1,background:nr.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nr.name.trim()?"pointer":"not-allowed"}}>Add Restaurant</button>
-            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{marginBottom:12}}>
-        <div style={{display:"flex",alignItems:"center",background:"#fff",border:`1px solid ${palette.border}`,borderRadius:12,padding:"0 12px",marginBottom:8}}>
-          <Search size={14} color={palette.muted}/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{flex:1,border:"none",outline:"none",padding:"10px 8px",fontSize:13,fontFamily:"inherit",color:palette.text,background:"transparent"}}/>
-          {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><X size={14} color={palette.muted}/></button>}
-        </div>
-        <div style={{display:"flex",gap:6,overflowX:"auto"}}>
-          {["all","wishlist","chosen","visited","skipped"].map(s=><button key={s} onClick={()=>setFSt(s)} style={{flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:fSt===s?palette.primary:"#F5F0F2",color:fSt===s?"#fff":palette.muted}}>{s==="all"?"All":REST_STATUS[s]?.label}</button>)}
-        </div>
-      </div>
-
-      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:palette.muted}}><div style={{fontSize:32,marginBottom:8}}>🍽️</div><p>No restaurants found</p></div>}
-      {filtered.map(r=>{const st=REST_STATUS[r.status]||REST_STATUS.wishlist;return(
-        <div key={r.id} style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:10}}>
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-            <div style={{flex:1,minWidth:0}}>
-              <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 5px"}}>{r.name}</h3>
-              <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                {r.cuisine&&<span style={{fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"2px 8px",borderRadius:99,fontWeight:600}}>{r.cuisine}</span>}
-                {r.price&&<span style={{fontSize:12,color:palette.primary,fontWeight:700}}>{r.price}</span>}
-                {r.area&&<span style={{fontSize:11,color:palette.muted,display:"flex",alignItems:"center",gap:3}}><MapPin size={10}/>{r.area}</span>}
-              </div>
-            </div>
-            <div style={{display:"flex",gap:6,marginLeft:8,flexShrink:0}}>
-              <button onClick={()=>cycle(r)} style={{background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>{st.label}</button>
-              <button onClick={()=>setDelId(r.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"5px 7px",cursor:"pointer"}}><Trash2 size={11}/></button>
-            </div>
-          </div>
-          {r.mustTry&&<p style={{fontSize:12,color:palette.text,margin:"0 0 4px"}}>⭐ {r.mustTry}</p>}
-          {r.reservationRequired&&r.reservationRequired!=="No"&&<span style={{fontSize:11,background:"#FFF3DC",color:"#8A6200",padding:"2px 8px",borderRadius:99,fontWeight:600,display:"inline-block",marginBottom:4}}>Reservation: {r.reservationRequired}</span>}
-          {r.notes&&<p style={{fontSize:11,color:palette.muted,margin:"4px 0 0",lineHeight:1.4}}>{r.notes}</p>}
-        </div>
-      );})}
-    </div>
-  );
-}
-
-// ─── HOTELS VIEW ──────────────────────────────────────────────────────────────
-function HotelsView({ trip, palette, onUpdate }) {
-  const [copied,setCopied]=useState(null);
-  const [showAdd,setShowAdd]=useState(false);
-  const [delId,setDelId]=useState(null);
-  const [nh,setNh]=useState({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:""});
-
-  const copy=(id,txt)=>{navigator.clipboard.writeText(txt).catch(()=>{});setCopied(id);setTimeout(()=>setCopied(null),1500);};
-  const doDelete=(id)=>{onUpdate("hotels",trip.hotels.filter(x=>x.id!==id));setDelId(null);};
-  const addH=()=>{if(!nh.name.trim())return;onUpdate("hotels",[...trip.hotels,{...nh,id:uid()}]);setShowAdd(false);setNh({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:""});};
-
-  return (
-    <div style={{padding:"24px 20px 40px"}}>
-      {delId&&<Confirm message="Remove this hotel?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Hotels</h2><p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.hotels.length} stays</p></div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add Hotel</button>
-      </div>
-
-      {showAdd&&(
-        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
-          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>New Stay</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="City" value={nh.city} placeholder="e.g. Paris" onChange={v=>setNh(p=>({...p,city:v}))}/><Inp label="Hotel Name" value={nh.name} placeholder="Hotel name" onChange={v=>setNh(p=>({...p,name:v}))}/></div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="Check-in" type="date" value={nh.checkIn} onChange={v=>setNh(p=>({...p,checkIn:v}))}/><Inp label="Check-out" type="date" value={nh.checkOut} onChange={v=>setNh(p=>({...p,checkOut:v}))}/></div>
-          <Inp label="Confirmation #" value={nh.confirmation} placeholder="Booking reference" onChange={v=>setNh(p=>({...p,confirmation:v}))}/>
-          <Inp label="Address" value={nh.address} placeholder="Full address" onChange={v=>setNh(p=>({...p,address:v}))}/>
-          <Inp label="Phone" value={nh.phone} placeholder="+XX XXX XXXX" onChange={v=>setNh(p=>({...p,phone:v}))}/>
-          <Inp label="Notes" value={nh.notes} placeholder="Early check-in, preferences…" onChange={v=>setNh(p=>({...p,notes:v}))} multi rows={2}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={addH} disabled={!nh.name.trim()} style={{flex:1,background:nh.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nh.name.trim()?"pointer":"not-allowed"}}>Add Hotel</button>
-            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {trip.hotels.map(h=>{
-        const nights=nightsBetween(h.checkIn,h.checkOut),du=daysUntil(h.checkIn);
-        const active=new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date();
-        const past=new Date(h.checkOut+"T00:00:00")<new Date();
-        return(
-          <div key={h.id} style={{background:"#fff",borderRadius:20,border:`1.5px solid ${active?palette.primary+"44":palette.border}`,marginBottom:12,overflow:"hidden",opacity:past?0.65:1,boxShadow:active?`0 4px 20px ${palette.primary}18`:"0 1px 8px rgba(0,0,0,0.04)"}}>
-            {active&&<div style={{background:`linear-gradient(90deg,${palette.primary},${palette.accent})`,height:4}}/>}
-            <div style={{padding:"16px 18px"}}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                <div>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5}}>
-                    <span style={{background:cityColor(h.city)+"20",color:cityColor(h.city),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99}}>{h.city}</span>
-                    {active&&<span style={{background:palette.primaryLight,color:palette.primary,fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:99}}>STAYING HERE</span>}
-                  </div>
-                  <h3 style={{fontSize:16,fontWeight:700,color:palette.text,margin:0}}>{h.name}</h3>
-                </div>
-                <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
-                  <div><div style={{fontSize:20,fontWeight:800,color:palette.primary}}>{nights}</div><div style={{fontSize:11,color:palette.muted,fontWeight:600}}>night{nights!==1?"s":""}</div></div>
-                  <button onClick={()=>setDelId(h.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"5px 7px",cursor:"pointer"}}><Trash2 size={12}/></button>
-                </div>
-              </div>
-              <div style={{background:"#FAF8F9",borderRadius:12,padding:"10px 12px",marginBottom:10,display:"flex",justifyContent:"space-between"}}>
-                <div><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>CHECK IN</p><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtDate(h.checkIn)}</p></div>
-                <div style={{width:1,background:palette.border}}/>
-                <div style={{textAlign:"right"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>CHECK OUT</p><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtDate(h.checkOut)}</p></div>
-              </div>
-              {!past&&du>0&&<p style={{fontSize:11,color:palette.muted,margin:"0 0 10px",textAlign:"center"}}>Check-in in {du} day{du!==1?"s":""}</p>}
-              <div style={{display:"flex",gap:8}}>
-                {h.confirmation&&<button onClick={()=>copy(h.id,h.confirmation)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:copied===h.id?"#DFF0E1":palette.primaryLight,color:copied===h.id?"#3A6B42":palette.primary,border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.2s"}}>{copied===h.id?<Check size={13}/>:<Copy size={13}/>}{copied===h.id?"Copied!":h.confirmation}</button>}
-                {h.address&&<a href={`https://maps.google.com/?q=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,borderRadius:10,padding:"10px 14px",fontSize:12,fontWeight:700,textDecoration:"none"}}><MapPin size={13}/>Map</a>}
-              </div>
-              {h.notes&&<p style={{fontSize:12,color:palette.muted,margin:"10px 0 0",lineHeight:1.4}}>{h.notes}</p>}
-            </div>
-          </div>
-        );
-      })}
-      {trip.hotels.length===0&&<div style={{textAlign:"center",padding:"60px 0",color:palette.muted}}><div style={{fontSize:40,marginBottom:12}}>🏨</div><p>No hotels yet</p></div>}
-    </div>
-  );
-}
-
-// ─── TRANSPORT VIEW ───────────────────────────────────────────────────────────
 function TransportView({ trip, palette, onUpdate }) {
   const legs=trip.itinerary.filter(d=>d.transport!=="walk");
   const cyc=(d)=>{const c=["confirmed","pending","needs booking"];onUpdate("itinerary",trip.itinerary.map(x=>x.id===d.id?{...x,bookingStatus:c[(c.indexOf(d.bookingStatus)+1)%c.length]}:x));};
@@ -1098,70 +826,784 @@ function MemoriesView({ trip, palette, onUpdate }) {
 }
 
 // ─── SETTINGS VIEW ────────────────────────────────────────────────────────────
-function SettingsView({ trip, palette, paletteName, setPaletteName, onUpdate, onReset, onImportNew }) {
-  const [edit, setEdit] = useState(false);
-  const [tn, setTn] = useState(trip.tripName);
-  const [sd, setSd] = useState(trip.startDate);
-  const [ed, setEd] = useState(trip.endDate);
-  const [confirmReset, setConfirmReset] = useState(false);
-  const save = () => { onUpdate("meta", {tripName:tn, startDate:sd, endDate:ed}); setEdit(false); };
 
+// ══════════════════════════════════════════════════════════════
+// CUISINE AUTOCOMPLETE
+// ══════════════════════════════════════════════════════════════
+const CUISINE_LIST = [
+  "American","Bakery","BBQ","Brunch","Burger","Café","Chinese","Cocktail Bar",
+  "Dim Sum","Ethiopian","Filipino","Fine Dining","French","Fusion","Greek",
+  "Hot Pot","Indian","Indonesian","Izakaya","Italian","Japanese","Kaiseki",
+  "Korean","Latin","Malaysian","Mediterranean","Mexican","Middle Eastern",
+  "Noodles","Okonomiyaki","Omakase","Pasta","Persian","Pizza","Ramen",
+  "Seafood","Shabu-shabu","Soba","Spanish","Sri Lankan","Steak","Street Food",
+  "Sushi","Tapas","Thai","Turkish","Udon","Vegan","Vietnamese","Wine Bar","Yakitori"
+];
+
+function CuisineInput({ value, onChange, palette }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState(value || "");
+  const ref = useRef();
+  useEffect(() => { setQ(value || ""); }, [value]);
+  const filtered = q.length > 0
+    ? CUISINE_LIST.filter(c => c.toLowerCase().includes(q.toLowerCase())).slice(0, 7)
+    : CUISINE_LIST.slice(0, 7);
+  const pick = (v) => { setQ(v); onChange(v); setOpen(false); };
+  useEffect(() => {
+    const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", fn);
+    return () => document.removeEventListener("mousedown", fn);
+  }, []);
   return (
-    <div style={{padding:"24px 20px 40px"}}>
-      {confirmReset && <Confirm message="Permanently delete this trip and all its data?" onOk={() => { setConfirmReset(false); onReset(); }} onNo={() => setConfirmReset(false)}/>}
-      <h2 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 20px"}}>Settings</h2>
-
-      {/* Trip info */}
-      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
-          <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:0}}>Trip Info</p>
-          <button onClick={() => { setTn(trip.tripName); setSd(trip.startDate); setEd(trip.endDate); setEdit(v=>!v); }} style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>{edit?"Cancel":"Edit"}</button>
-        </div>
-        {edit ? (
-          <>
-            <Inp label="Trip Name" value={tn} onChange={setTn}/>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-              <Inp label="Start Date" type="date" value={sd} onChange={setSd}/>
-              <Inp label="End Date" type="date" value={ed} onChange={setEd}/>
+    <div ref={ref} style={{ position:"relative", marginBottom:12 }}>
+      <label style={{ fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em" }}>Cuisine</label>
+      <input value={q}
+        onChange={e => { setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        placeholder="Type or pick — e.g. Ramen, Kaiseki…"
+        style={{ width:"100%",border:"1px solid #EDE5E7",borderRadius:10,padding:"9px 11px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",color:"#2D2426",background:"#FAF8F9" }}
+      />
+      {open && filtered.length > 0 && (
+        <div style={{ position:"absolute",top:"calc(100% + 2px)",left:0,right:0,background:"#fff",border:"1px solid #EDE5E7",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,0.13)",zIndex:600,overflow:"hidden" }}>
+          {filtered.map(c => (
+            <div key={c} onMouseDown={() => pick(c)}
+              style={{ padding:"10px 14px",fontSize:13,cursor:"pointer",color:"#2D2426",borderBottom:"1px solid #F8F4F5" }}
+              onMouseEnter={e => e.currentTarget.style.background="#FAF7F8"}
+              onMouseLeave={e => e.currentTarget.style.background="#fff"}>
+              {c}
             </div>
-            <button onClick={save} style={{background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save Changes</button>
-          </>
-        ) : (
-          <>
-            <p style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{trip.tripName}</p>
-            <p style={{fontSize:13,color:palette.muted,margin:0}}>{fmtDate(trip.startDate)} — {fmtDate(trip.endDate)}</p>
-          </>
-        )}
-      </div>
-
-      {/* Theme */}
-      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14}}>
-        <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Colour Theme</p>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
-          {Object.entries(PALETTES).map(([name,p]) => (
-            <button key={name} onClick={() => setPaletteName(name)} style={{background:p.primaryLight,border:`2.5px solid ${paletteName===name?p.primary:"transparent"}`,borderRadius:14,padding:"12px 14px",cursor:"pointer",textAlign:"left",transition:"all 0.15s"}}>
-              <div style={{width:26,height:26,borderRadius:"50%",background:p.primary,marginBottom:6}}/>
-              <p style={{fontSize:12,fontWeight:700,color:p.text,margin:0}}>{p.name}</p>
-            </button>
           ))}
         </div>
+      )}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOOKING CONFIRMATION UPLOAD
+// ══════════════════════════════════════════════════════════════
+function BookingUpload({ files, onAdd, onRemove, palette }) {
+  const ref = useRef();
+  const read = (file) => new Promise(res => {
+    const r = new FileReader();
+    r.onload = e => res({ name:file.name, type:file.type, data:e.target.result });
+    r.readAsDataURL(file);
+  });
+  const handle = async (fl) => {
+    const results = await Promise.all(Array.from(fl).map(read));
+    results.forEach(f => onAdd(f));
+  };
+  const download = (f) => {
+    const a = document.createElement("a"); a.href = f.data; a.download = f.name; a.click();
+  };
+  const isPDF = (f) => f.type === "application/pdf" || f.name?.endsWith(".pdf");
+  return (
+    <div style={{ marginBottom:12 }}>
+      <label style={{ fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em" }}>Booking Confirmation</label>
+      {(files||[]).length > 0 && (
+        <div style={{ marginBottom:8, display:"flex", flexDirection:"column", gap:6 }}>
+          {files.map((f,i) => (
+            <div key={i} style={{ display:"flex",alignItems:"center",gap:8,background:"#FAF8F9",borderRadius:10,padding:"8px 12px",border:"1px solid #EDE5E7" }}>
+              <span style={{ fontSize:18 }}>{isPDF(f)?"📄":"🖼️"}</span>
+              <span style={{ flex:1,fontSize:12,fontWeight:600,color:"#2D2426",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{f.name}</span>
+              <button onClick={() => download(f)} style={{ background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer" }}>View</button>
+              <button onClick={() => onRemove(i)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"4px 8px",fontSize:11,cursor:"pointer" }}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={() => ref.current.click()}
+        style={{ display:"flex",alignItems:"center",gap:6,background:"#F5F0F2",color:"#9A8F92",border:"1px dashed #D0C8CA",borderRadius:10,padding:"9px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
+        <Upload size={13}/>Upload PDF or Image
+      </button>
+      <input ref={ref} type="file" accept="image/*,.pdf" multiple style={{ display:"none" }} onChange={e => handle(e.target.files)}/>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// FINANCES VIEW
+// ══════════════════════════════════════════════════════════════
+const EXPENSE_CATS = [
+  { id:"accommodation", label:"Accommodation", emoji:"🏨" },
+  { id:"transport",     label:"Transport",     emoji:"🚄" },
+  { id:"food",          label:"Food & Drink",  emoji:"🍜" },
+  { id:"activity",      label:"Activities",    emoji:"🎭" },
+  { id:"shopping",      label:"Shopping",      emoji:"🛍️" },
+  { id:"health",        label:"Health",        emoji:"💊" },
+  { id:"other",         label:"Other",         emoji:"📦" },
+];
+const CURRENCIES = ["USD","IDR","JPY","EUR","GBP","AUD","SGD","MYR","THB","KRW","CNY","HKD","TWD","PHP","VND","CHF","CAD","NZD"];
+
+function FinancesView({ trip, palette, onUpdate }) {
+  const expenses = trip.expenses || [];
+  const budget   = trip.budget   || { amount:"", currency:"USD" };
+  const [showAdd,setShowAdd]     = useState(false);
+  const [editId,setEditId]       = useState(null);
+  const [delId,setDelId]         = useState(null);
+  const [filterCat,setFilterCat] = useState("all");
+  const [showBudget,setShowBudget] = useState(false);
+  const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
+
+  const blank = () => ({
+    date: new Date().toISOString().split("T")[0],
+    description:"", category:"food",
+    amount:"", currency: budget.currency||"USD",
+    city:"", paidBy:"", notes:""
+  });
+  const [ne, setNe] = useState(blank());
+
+  const save = () => {
+    if (!ne.description.trim() || !ne.amount) return;
+    const exp = { ...ne, id:editId||uid(), amount:parseFloat(ne.amount) };
+    onUpdate("expenses", editId ? expenses.map(e=>e.id===editId?exp:e) : [...expenses,exp]);
+    setEditId(null); setShowAdd(false); setNe(blank());
+  };
+  const startEdit = (e) => { setNe({...e,amount:String(e.amount)}); setEditId(e.id); setShowAdd(true); };
+  const doDelete  = (id) => { onUpdate("expenses",expenses.filter(e=>e.id!==id)); setDelId(null); };
+
+  const filtered = filterCat==="all" ? expenses : expenses.filter(e=>e.category===filterCat);
+
+  // Totals per currency
+  const totals = expenses.reduce((acc,e)=>{ acc[e.currency]=(acc[e.currency]||0)+(parseFloat(e.amount)||0); return acc; },{});
+
+  // Export
+  const exportCSV = () => {
+    const hdr = ["Date","Description","Category","Amount","Currency","City","Paid By","Notes"];
+    const rows = expenses.map(e=>[e.date,e.description,EXPENSE_CATS.find(c=>c.id===e.category)?.label||e.category,e.amount,e.currency,e.city||"",e.paidBy||"",e.notes||""]);
+    const csv = [hdr,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
+    const a=document.createElement("a"); a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv); a.download=`${trip.tripName}-finances.csv`; a.click();
+  };
+  const exportXLSX = () => {
+    const ws = XLSX.utils.json_to_sheet(expenses.map(e=>({
+      Date:e.date, Description:e.description,
+      Category:EXPENSE_CATS.find(c=>c.id===e.category)?.label||e.category,
+      Amount:parseFloat(e.amount)||0, Currency:e.currency,
+      City:e.city||"", "Paid By":e.paidBy||"", Notes:e.notes||""
+    })));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,"Expenses");
+    const ws2 = XLSX.utils.json_to_sheet([{ Trip:trip.tripName, "Budget Amount":budget.amount||"", "Budget Currency":budget.currency }]);
+    XLSX.utils.book_append_sheet(wb,ws2,"Budget");
+    XLSX.writeFile(wb,`${trip.tripName}-finances.xlsx`);
+  };
+  const exportJSON = () => {
+    const blob = JSON.stringify({ trip:trip.tripName, exportedAt:new Date().toISOString(), budget, expenses },null,2);
+    const a=document.createElement("a"); a.href="data:application/json;charset=utf-8,"+encodeURIComponent(blob); a.download=`${trip.tripName}-finances.json`; a.click();
+  };
+
+  return (
+    <div style={{ padding:"24px 20px 40px" }}>
+      {delId && <Confirm message="Delete this expense?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+        <div>
+          <h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Finances</h2>
+          <p style={{ color:palette.muted,fontSize:13,margin:0 }}>{expenses.length} expense{expenses.length!==1?"s":""} tracked</p>
+        </div>
+        <button onClick={()=>{ setNe(blank()); setEditId(null); setShowAdd(v=>!v); }}
+          style={{ display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+          <Plus size={15}/>Add
+        </button>
       </div>
 
-      {/* Data */}
-      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20}}>
-        <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 12px"}}>Data</p>
-        <button onClick={onImportNew} style={{display:"block",width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:10}}>
-          📥 Import / Replace Excel File
-        </button>
-        <button onClick={() => setConfirmReset(true)} style={{display:"block",width:"100%",background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>
-          🗑️ Delete This Trip
-        </button>
+      {/* Budget card */}
+      <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: showBudget?12:0 }}>
+          <div>
+            <p style={{ fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 4px" }}>Trip Budget</p>
+            {budget.amount
+              ? <p style={{ fontSize:22,fontWeight:800,color:palette.text,margin:0 }}>{budget.currency} {parseFloat(budget.amount).toLocaleString()}</p>
+              : <p style={{ fontSize:14,color:palette.muted,margin:0 }}>No budget set yet</p>
+            }
+          </div>
+          <button onClick={()=>setShowBudget(v=>!v)}
+            style={{ background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
+            {showBudget?"Done":"Set Budget"}
+          </button>
+        </div>
+        {showBudget && (
+          <div style={{ display:"flex",gap:8 }}>
+            <div style={{ flex:1 }}><Inp label="" value={String(budget.amount||"")} type="number" placeholder="Amount" onChange={v=>onUpdate("budget",{...budget,amount:v})} sx={{marginBottom:0}}/></div>
+            <div style={{ width:100 }}><Inp label="" value={budget.currency} opts={CURRENCIES} onChange={v=>onUpdate("budget",{...budget,currency:v})} sx={{marginBottom:0}}/></div>
+          </div>
+        )}
+        {/* Progress bar */}
+        {budget.amount && Object.entries(totals).map(([cur,spent]) => {
+          if (cur !== budget.currency) return null;
+          const pct = Math.min(100,Math.round((spent/parseFloat(budget.amount))*100));
+          const over = spent > parseFloat(budget.amount);
+          return (
+            <div key={cur} style={{ marginTop:12 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:5 }}>
+                <span style={{ color:palette.muted }}>Spent: <strong style={{ color:over?"#E05C5C":palette.text }}>{cur} {spent.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></span>
+                <span style={{ color:over?"#E05C5C":palette.muted,fontWeight:700 }}>{over?"Over budget!":`${pct}% used`}</span>
+              </div>
+              <div style={{ height:8,background:"#F5F0F2",borderRadius:99,overflow:"hidden" }}>
+                <div style={{ height:"100%",width:`${pct}%`,background:over?"#E05C5C":`linear-gradient(90deg,${palette.primary},${palette.accent})`,borderRadius:99,transition:"width 0.4s" }}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Total pills */}
+      {Object.keys(totals).length > 0 && (
+        <div style={{ display:"flex",gap:8,overflowX:"auto",marginBottom:14 }}>
+          {Object.entries(totals).map(([cur,amt]) => (
+            <div key={cur} style={{ background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"10px 16px",flexShrink:0 }}>
+              <p style={{ fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px",textTransform:"uppercase" }}>{cur}</p>
+              <p style={{ fontSize:18,fontWeight:800,color:palette.primary,margin:0 }}>{amt.toLocaleString(undefined,{maximumFractionDigits:0})}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* By category breakdown */}
+      {expenses.length > 0 && (
+        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14 }}>
+          <p style={{ fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 12px" }}>By Category</p>
+          {EXPENSE_CATS.map(cat => {
+            const items = expenses.filter(e=>e.category===cat.id);
+            if (!items.length) return null;
+            const byCur = items.reduce((acc,e)=>{ acc[e.currency]=(acc[e.currency]||0)+(parseFloat(e.amount)||0); return acc; },{});
+            return (
+              <div key={cat.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${palette.border}` }}>
+                <span style={{ fontSize:13,color:palette.text }}>{cat.emoji} {cat.label}</span>
+                <span style={{ fontSize:13,fontWeight:700,color:palette.text }}>
+                  {Object.entries(byCur).map(([c,a])=>`${c} ${a.toLocaleString(undefined,{maximumFractionDigits:0})}`).join(" · ")}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {/* Export */}
+      {expenses.length > 0 && (
+        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14 }}>
+          <p style={{ fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px" }}>Export Data</p>
+          <div style={{ display:"flex",gap:8,marginBottom:8 }}>
+            <button onClick={exportCSV}  style={{ flex:1,background:"#DFF0E1",color:"#3A6B42",border:"none",borderRadius:10,padding:"11px 0",fontSize:12,fontWeight:700,cursor:"pointer" }}>📄 CSV</button>
+            <button onClick={exportXLSX} style={{ flex:1,background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:10,padding:"11px 0",fontSize:12,fontWeight:700,cursor:"pointer" }}>📊 Excel</button>
+            <button onClick={exportJSON} style={{ flex:1,background:"#EEE8F8",color:"#5B4C8A",border:"none",borderRadius:10,padding:"11px 0",fontSize:12,fontWeight:700,cursor:"pointer" }}>🔗 JSON</button>
+          </div>
+          <p style={{ fontSize:11,color:palette.muted,margin:0,lineHeight:1.5 }}>CSV/Excel → Notion, Google Sheets, Excel. JSON → personal finance apps & APIs.</p>
+        </div>
+      )}
+
+      {/* Add / edit form */}
+      {showAdd && (
+        <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 6px 30px rgba(0,0,0,0.08)" }}>
+          <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>{editId?"Edit":"New"} Expense</h3>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+            <Inp label="Date" type="date" value={ne.date} onChange={v=>setNe(p=>({...p,date:v}))}/>
+            {cities.length>0
+              ? <Inp label="City" value={ne.city} opts={["(any)",...cities]} onChange={v=>setNe(p=>({...p,city:v==="(any)"?"":v}))}/>
+              : <Inp label="City" value={ne.city} placeholder="City" onChange={v=>setNe(p=>({...p,city:v}))}/>}
+          </div>
+          <Inp label="Description" value={ne.description} placeholder="What did you spend on?" onChange={v=>setNe(p=>({...p,description:v}))}/>
+          <Inp label="Category" value={ne.category} opts={EXPENSE_CATS.map(c=>({v:c.id,l:c.emoji+" "+c.label}))} onChange={v=>setNe(p=>({...p,category:v}))}/>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:8 }}>
+            <Inp label="Amount" type="number" value={ne.amount} placeholder="0.00" onChange={v=>setNe(p=>({...p,amount:v}))}/>
+            <Inp label="Currency" value={ne.currency} opts={CURRENCIES} onChange={v=>setNe(p=>({...p,currency:v}))}/>
+          </div>
+          <Inp label="Paid By" value={ne.paidBy} placeholder="Your name / split" onChange={v=>setNe(p=>({...p,paidBy:v}))}/>
+          <Inp label="Notes" value={ne.notes} placeholder="Extra details…" onChange={v=>setNe(p=>({...p,notes:v}))} multi rows={2}/>
+          <div style={{ display:"flex",gap:8 }}>
+            <button onClick={save} disabled={!ne.description.trim()||!ne.amount}
+              style={{ flex:1,background:(ne.description.trim()&&ne.amount)?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:(ne.description.trim()&&ne.amount)?"pointer":"not-allowed" }}>
+              {editId?"Save Changes":"Add Expense"}
+            </button>
+            <button onClick={()=>{ setShowAdd(false); setEditId(null); }}
+              style={{ flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Filter tabs */}
+      <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:12 }}>
+        <button onClick={()=>setFilterCat("all")} style={{ flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:filterCat==="all"?palette.primary:"#F5F0F2",color:filterCat==="all"?"#fff":palette.muted }}>All</button>
+        {EXPENSE_CATS.map(c => { if(!expenses.some(e=>e.category===c.id)) return null; return (
+          <button key={c.id} onClick={()=>setFilterCat(c.id)} style={{ flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:filterCat===c.id?palette.primary:"#F5F0F2",color:filterCat===c.id?"#fff":palette.muted }}>
+            {c.emoji} {c.label}
+          </button>
+        ); })}
+      </div>
+
+      {/* List */}
+      {filtered.length===0 && !showAdd && (
+        <div style={{ textAlign:"center",padding:"50px 0",color:palette.muted }}>
+          <div style={{ fontSize:40,marginBottom:12 }}>💸</div>
+          <p style={{ fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 6px" }}>No expenses yet</p>
+          <p style={{ fontSize:13 }}>Track every spend — export to Notion or your finance app when done</p>
+        </div>
+      )}
+      {filtered.map(e => {
+        const cat = EXPENSE_CATS.find(c=>c.id===e.category)||EXPENSE_CATS[6];
+        return (
+          <div key={e.id} style={{ background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12 }}>
+            <div style={{ width:40,height:40,borderRadius:12,background:palette.primaryLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>{cat.emoji}</div>
+            <div style={{ flex:1,minWidth:0 }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
+                <div style={{ flex:1,minWidth:0 }}>
+                  <p style={{ fontSize:13,fontWeight:700,color:palette.text,margin:"0 0 2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{e.description}</p>
+                  <div style={{ display:"flex",gap:6,alignItems:"center",flexWrap:"wrap" }}>
+                    <span style={{ fontSize:11,color:palette.muted }}>{fmtDateShort(e.date)}</span>
+                    {e.city&&<span style={{ fontSize:11,color:palette.muted }}>· {e.city}</span>}
+                    <span style={{ fontSize:10,background:"#F5F0F2",color:palette.muted,padding:"1px 7px",borderRadius:99,fontWeight:600 }}>{cat.label}</span>
+                    {e.paidBy&&<span style={{ fontSize:10,color:palette.muted }}>👤 {e.paidBy}</span>}
+                  </div>
+                  {e.notes&&<p style={{ fontSize:11,color:palette.muted,margin:"3px 0 0" }}>{e.notes}</p>}
+                </div>
+                <div style={{ textAlign:"right",marginLeft:12,flexShrink:0 }}>
+                  <p style={{ fontSize:15,fontWeight:800,color:palette.primary,margin:"0 0 5px" }}>{e.currency} {parseFloat(e.amount).toLocaleString(undefined,{maximumFractionDigits:2})}</p>
+                  <div style={{ display:"flex",gap:4,justifyContent:"flex-end" }}>
+                    <button onClick={()=>startEdit(e)} style={{ background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:7,padding:"3px 8px",fontSize:11,cursor:"pointer" }}><Edit3 size={10}/></button>
+                    <button onClick={()=>setDelId(e.id)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"3px 8px",fontSize:11,cursor:"pointer" }}><Trash2 size={10}/></button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// TRIP SELECTOR — with delete trip
+// ══════════════════════════════════════════════════════════════
+function TripSelector({ trips, onSelect, onCreate, onImport, onDelete, palette }) {
+  const fileRef = useRef();
+  const [dragging, setDragging] = useState(false);
+  const [delId, setDelId] = useState(null);
+
+  const parseAndCreate = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const wb = XLSX.read(e.target.result, { type:"binary" });
+        const sheets = {};
+        wb.SheetNames.forEach(n => { sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { defval:"" }); });
+        onImport(parseExcelSheets(sheets));
+      } catch(err) { console.error("Import error:", err); alert("Could not read file. Open F12 console for details."); }
+    };
+    reader.readAsBinaryString(file);
+  };
+
+  const tripStatus = (t) => {
+    if (!t.startDate) return { label:"Draft", color:"#6A6060", bg:"#F1EFEF" };
+    const du = daysUntil(t.startDate);
+    if (du > 0)  return { label:`In ${du} days`, color:"#8A6200", bg:"#FFF3DC" };
+    if (du === 0) return { label:"Today!", color:"#fff", bg:"#C97B84" };
+    if (daysUntil(t.endDate) >= 0) return { label:"Ongoing", color:"#3A6B42", bg:"#DFF0E1" };
+    return { label:"Completed", color:"#6A6060", bg:"#F1EFEF" };
+  };
+
+  return (
+    <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#FAF7F8 0%,#F2DDE1 100%)", fontFamily:"'DM Sans',sans-serif" }}>
+      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
+      {delId && <Confirm message="Permanently delete this trip and all its data? This cannot be undone." onOk={()=>{ onDelete(delId); setDelId(null); }} onNo={()=>setDelId(null)}/>}
+
+      <div style={{ padding:"44px 24px 0" }}>
+        <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:6 }}>
+          <span style={{ fontSize:38 }}>☁️</span>
+          <div>
+            <h1 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:28,fontWeight:700,color:"#2D2426",margin:0 }}>Kumo Travel</h1>
+            <p style={{ color:"#9A8F92",fontSize:13,margin:0 }}>All your trips in one place</p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ padding:"28px 24px 60px" }}>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20 }}>
+          <button onClick={onCreate}
+            style={{ background:palette.primary,color:"#fff",border:"none",borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
+            <Plus size={22}/>New Trip
+          </button>
+          <button onClick={()=>fileRef.current.click()}
+            onDragOver={e=>{e.preventDefault();setDragging(true);}}
+            onDragLeave={()=>setDragging(false)}
+            onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)parseAndCreate(f);}}
+            style={{ background:dragging?palette.primaryLight:"#fff",color:palette.primary,border:`2px dashed ${palette.primary}`,borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
+            <Upload size={22}/>Import Excel
+          </button>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={e=>{if(e.target.files[0])parseAndCreate(e.target.files[0]);}}/>
+        </div>
+
+        {trips.length===0 && (
+          <>
+            <button onClick={()=>onImport({...DEMO_TRIP,id:uid()})}
+              style={{ width:"100%",background:"#fff",color:"#9A8F92",border:"1px solid #EDE5E7",borderRadius:14,padding:"13px",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:28 }}>
+              ✈️ Load Japan demo trip
+            </button>
+            <div style={{ textAlign:"center",padding:"20px 0",color:"#9A8F92" }}>
+              <div style={{ fontSize:48,marginBottom:12 }}>🗺️</div>
+              <p style={{ fontSize:16,fontWeight:700,color:"#2D2426",margin:"0 0 6px" }}>No trips yet</p>
+              <p style={{ fontSize:13 }}>Create a new trip or import your Excel planner above</p>
+            </div>
+          </>
+        )}
+
+        {trips.length>0 && (
+          <>
+            <p style={{ fontSize:11,fontWeight:800,color:"#9A8F92",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 12px" }}>Your Trips ({trips.length})</p>
+            {trips.map(trip => {
+              const st = tripStatus(trip);
+              const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
+              return (
+                <div key={trip.id}
+                  style={{ background:"#fff",borderRadius:20,border:"1px solid #EDE5E7",marginBottom:12,boxShadow:"0 2px 14px rgba(0,0,0,0.05)",overflow:"hidden",transition:"transform 0.15s" }}
+                  onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
+                  onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+                  <div onClick={()=>onSelect(trip.id)} style={{ padding:"18px 20px",cursor:"pointer" }}>
+                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8 }}>
+                      <div>
+                        <h3 style={{ fontSize:17,fontWeight:700,color:"#2D2426",margin:"0 0 3px",fontFamily:"'Playfair Display',Georgia,serif" }}>{trip.tripName}</h3>
+                        <p style={{ fontSize:12,color:"#9A8F92",margin:0 }}>{fmtDateShort(trip.startDate)} — {fmtDateShort(trip.endDate)}</p>
+                      </div>
+                      <span style={{ background:st.bg,color:st.color,fontSize:10,fontWeight:800,padding:"4px 10px",borderRadius:99,flexShrink:0 }}>{st.label}</span>
+                    </div>
+                    <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:8 }}>
+                      {cities.slice(0,5).map(c=><span key={c} style={{ background:cityColor(c)+"20",color:cityColor(c),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99 }}>{c}</span>)}
+                      {cities.length>5&&<span style={{ fontSize:11,color:"#9A8F92" }}>+{cities.length-5}</span>}
+                    </div>
+                    <div style={{ display:"flex",gap:14,flexWrap:"wrap" }}>
+                      {trip.itinerary.length>0&&<span style={{ fontSize:12,color:"#9A8F92" }}>📅 {trip.itinerary.length} days</span>}
+                      {(trip.memories||[]).length>0&&<span style={{ fontSize:12,color:"#9A8F92" }}>📸 {trip.memories.length} memories</span>}
+                      {(trip.expenses||[]).length>0&&<span style={{ fontSize:12,color:"#9A8F92" }}>💸 {trip.expenses.length} expenses</span>}
+                    </div>
+                  </div>
+                  <div style={{ borderTop:"1px solid #F5F0F2",padding:"10px 20px",display:"flex",justifyContent:"flex-end" }}>
+                    <button onClick={e=>{e.stopPropagation();setDelId(trip.id);}}
+                      style={{ display:"flex",alignItems:"center",gap:5,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
+                      <Trash2 size={12}/>Delete Trip
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        )}
       </div>
     </div>
   );
 }
 
-// ─── ROOT APP ─────────────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// RESTAURANTS VIEW — with cuisine autocomplete
+// ══════════════════════════════════════════════════════════════
+function RestaurantsView({ trip, palette, onUpdate }) {
+  const allCities=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];
+  const [city,setCity]=useState(allCities[0]||"");
+  const [search,setSearch]=useState("");
+  const [fSt,setFSt]=useState("all");
+  const [showAdd,setShowAdd]=useState(false);
+  const [showAddCity,setShowAddCity]=useState(false);
+  const [delId,setDelId]=useState(null);
+  const [nr,setNr]=useState({city:allCities[0]||"",name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",bookingFiles:[]});
+
+  const switchCity=(c)=>{setCity(c);setNr(p=>({...p,city:c}));};
+  useEffect(()=>{const u=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];if(u.length>0&&!u.includes(city))switchCity(u[u.length-1]);},[trip.restaurants]);
+
+  const SO=["wishlist","chosen","visited","skipped"];
+  const cycle=(r)=>{const i=SO.indexOf(r.status);onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,status:SO[(i+1)%SO.length]}:x));};
+  const doDelete=(id)=>{onUpdate("restaurants",trip.restaurants.filter(x=>x.id!==id));setDelId(null);};
+  const addR=()=>{
+    if(!nr.name.trim())return;
+    onUpdate("restaurants",[...trip.restaurants,{...nr,id:uid()}]);
+    setShowAdd(false);
+    setNr({city,name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",bookingFiles:[]});
+  };
+  const addCity=(name)=>{onUpdate("restaurants",[...trip.restaurants,{id:uid(),city:name,name:"",cuisine:"",price:"",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",bookingFiles:[]}]);setShowAddCity(false);};
+
+  const filtered=trip.restaurants.filter(r=>r.city===city&&r.name&&(fSt==="all"||r.status===fSt)&&(search===""||r.name.toLowerCase().includes(search.toLowerCase())||(r.cuisine||"").toLowerCase().includes(search.toLowerCase())));
+
+  return (
+    <div style={{ padding:"24px 20px 40px" }}>
+      {delId&&<Confirm message="Remove this restaurant?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+      {showAddCity&&<CityDialog onOk={addCity} onNo={()=>setShowAddCity(false)} palette={palette}/>}
+
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
+        <div>
+          <h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Restaurants</h2>
+          <p style={{ color:palette.muted,fontSize:13,margin:0 }}>{trip.restaurants.filter(r=>r.name&&r.status==="wishlist").length} wishlist · {trip.restaurants.filter(r=>r.name&&r.status==="chosen").length} chosen</p>
+        </div>
+        <button onClick={()=>setShowAdd(v=>!v)} style={{ display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
+          <Plus size={15}/>Add
+        </button>
+      </div>
+
+      <div style={{ display:"flex",gap:6,overflowX:"auto",paddingBottom:10,marginBottom:8 }}>
+        {allCities.map(c=><button key={c} onClick={()=>switchCity(c)} style={{ flexShrink:0,padding:"7px 16px",borderRadius:99,border:"none",fontSize:13,fontWeight:700,cursor:"pointer",background:city===c?palette.primary:palette.primaryLight,color:city===c?"#fff":palette.primary }}>{c}</button>)}
+        <button onClick={()=>setShowAddCity(true)} style={{ flexShrink:0,padding:"7px 14px",borderRadius:99,border:`1.5px dashed ${palette.primary}`,background:"transparent",color:palette.primary,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><Plus size={13}/>City</button>
+      </div>
+
+      {showAdd&&(
+        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)" }}>
+          <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>Add Restaurant {city?"— "+city:""}</h3>
+          <Inp label="Name" value={nr.name} placeholder="Restaurant name" onChange={v=>setNr(p=>({...p,name:v}))}/>
+          <CuisineInput value={nr.cuisine} onChange={v=>setNr(p=>({...p,cuisine:v}))} palette={palette}/>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+            <Inp label="Price" value={nr.price} onChange={v=>setNr(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/>
+            <Inp label="Reservation" value={nr.reservationRequired} onChange={v=>setNr(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/>
+          </div>
+          <Inp label="Must-try dish" value={nr.mustTry} placeholder="Signature item" onChange={v=>setNr(p=>({...p,mustTry:v}))}/>
+          <Inp label="Area / District" value={nr.area} placeholder="Neighborhood" onChange={v=>setNr(p=>({...p,area:v}))}/>
+          <Inp label="Notes" value={nr.notes} placeholder="Hours, tips…" onChange={v=>setNr(p=>({...p,notes:v}))} multi rows={2}/>
+          {nr.reservationRequired!=="No"&&(
+            <BookingUpload
+              files={nr.bookingFiles||[]}
+              onAdd={f=>setNr(p=>({...p,bookingFiles:[...(p.bookingFiles||[]),f]}))}
+              onRemove={i=>setNr(p=>({...p,bookingFiles:p.bookingFiles.filter((_,pi)=>pi!==i)}))}
+              palette={palette}/>
+          )}
+          <div style={{ display:"flex",gap:8 }}>
+            <button onClick={addR} disabled={!nr.name.trim()} style={{ flex:1,background:nr.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nr.name.trim()?"pointer":"not-allowed" }}>Add Restaurant</button>
+            <button onClick={()=>setShowAdd(false)} style={{ flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ marginBottom:12 }}>
+        <div style={{ display:"flex",alignItems:"center",background:"#fff",border:`1px solid ${palette.border}`,borderRadius:12,padding:"0 12px",marginBottom:8 }}>
+          <Search size={14} color={palette.muted}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{ flex:1,border:"none",outline:"none",padding:"10px 8px",fontSize:13,fontFamily:"inherit",color:palette.text,background:"transparent" }}/>
+          {search&&<button onClick={()=>setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",padding:0 }}><X size={14} color={palette.muted}/></button>}
+        </div>
+        <div style={{ display:"flex",gap:6,overflowX:"auto" }}>
+          {["all","wishlist","chosen","visited","skipped"].map(s=><button key={s} onClick={()=>setFSt(s)} style={{ flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:fSt===s?palette.primary:"#F5F0F2",color:fSt===s?"#fff":palette.muted }}>{s==="all"?"All":REST_STATUS[s]?.label}</button>)}
+        </div>
+      </div>
+
+      {filtered.length===0&&<div style={{ textAlign:"center",padding:"40px 0",color:palette.muted }}><div style={{ fontSize:32,marginBottom:8 }}>🍽️</div><p>No restaurants found</p></div>}
+      {filtered.map(r=>{
+        const st=REST_STATUS[r.status]||REST_STATUS.wishlist;
+        const hasFiles=(r.bookingFiles||[]).length>0;
+        return (
+          <div key={r.id} style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:10 }}>
+            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6 }}>
+              <div style={{ flex:1,minWidth:0 }}>
+                <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 5px" }}>{r.name}</h3>
+                <div style={{ display:"flex",gap:6,flexWrap:"wrap",alignItems:"center" }}>
+                  {r.cuisine&&<span style={{ fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"2px 8px",borderRadius:99,fontWeight:600 }}>{r.cuisine}</span>}
+                  {r.price&&<span style={{ fontSize:12,color:palette.primary,fontWeight:700 }}>{r.price}</span>}
+                  {r.area&&<span style={{ fontSize:11,color:palette.muted,display:"flex",alignItems:"center",gap:3 }}><MapPin size={10}/>{r.area}</span>}
+                  {hasFiles&&<span style={{ fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700 }}>📄 Confirmation</span>}
+                </div>
+              </div>
+              <div style={{ display:"flex",gap:6,marginLeft:8,flexShrink:0 }}>
+                <button onClick={()=>cycle(r)} style={{ background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"5px 10px",cursor:"pointer" }}>{st.label}</button>
+                <button onClick={()=>setDelId(r.id)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"5px 7px",cursor:"pointer" }}><Trash2 size={11}/></button>
+              </div>
+            </div>
+            {r.mustTry&&<p style={{ fontSize:12,color:palette.text,margin:"0 0 4px" }}>⭐ {r.mustTry}</p>}
+            {r.reservationRequired&&r.reservationRequired!=="No"&&<span style={{ fontSize:11,background:"#FFF3DC",color:"#8A6200",padding:"2px 8px",borderRadius:99,fontWeight:600,display:"inline-block",marginBottom:4 }}>Reservation: {r.reservationRequired}</span>}
+            {r.notes&&<p style={{ fontSize:11,color:palette.muted,margin:"4px 0 0",lineHeight:1.4 }}>{r.notes}</p>}
+            {hasFiles&&(
+              <div style={{ marginTop:8 }}>
+                {(r.bookingFiles||[]).map((f,i)=>(
+                  <button key={i} onClick={()=>{ const a=document.createElement("a"); a.href=f.data; a.download=f.name; a.click(); }}
+                    style={{ display:"inline-flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",marginRight:6 }}>
+                    📄 {f.name}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOTELS VIEW — with booking upload
+// ══════════════════════════════════════════════════════════════
+function HotelsView({ trip, palette, onUpdate }) {
+  const [copied,setCopied]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [delId,setDelId]=useState(null);
+  const [nh,setNh]=useState({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",bookingFiles:[]});
+
+  const copy=(id,txt)=>{navigator.clipboard.writeText(txt).catch(()=>{});setCopied(id);setTimeout(()=>setCopied(null),1500);};
+  const doDelete=(id)=>{onUpdate("hotels",trip.hotels.filter(x=>x.id!==id));setDelId(null);};
+  const addH=()=>{
+    if(!nh.name.trim())return;
+    onUpdate("hotels",[...trip.hotels,{...nh,id:uid()}]);
+    setShowAdd(false);
+    setNh({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",bookingFiles:[]});
+  };
+
+  return (
+    <div style={{ padding:"24px 20px 40px" }}>
+      {delId&&<Confirm message="Remove this hotel?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
+        <div><h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Hotels</h2><p style={{ color:palette.muted,fontSize:13,margin:0 }}>{trip.hotels.length} stays</p></div>
+        <button onClick={()=>setShowAdd(v=>!v)} style={{ display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}><Plus size={15}/>Add Hotel</button>
+      </div>
+
+      {showAdd&&(
+        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)" }}>
+          <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>New Stay</h3>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+            <Inp label="City" value={nh.city} placeholder="e.g. Tokyo" onChange={v=>setNh(p=>({...p,city:v}))}/>
+            <Inp label="Hotel Name" value={nh.name} placeholder="Hotel name" onChange={v=>setNh(p=>({...p,name:v}))}/>
+          </div>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
+            <Inp label="Check-in" type="date" value={nh.checkIn} onChange={v=>setNh(p=>({...p,checkIn:v}))}/>
+            <Inp label="Check-out" type="date" value={nh.checkOut} onChange={v=>setNh(p=>({...p,checkOut:v}))}/>
+          </div>
+          <Inp label="Confirmation #" value={nh.confirmation} placeholder="Booking reference" onChange={v=>setNh(p=>({...p,confirmation:v}))}/>
+          <Inp label="Address" value={nh.address} placeholder="Full address" onChange={v=>setNh(p=>({...p,address:v}))}/>
+          <Inp label="Phone" value={nh.phone} placeholder="+XX XXX XXXX" onChange={v=>setNh(p=>({...p,phone:v}))}/>
+          <Inp label="Notes" value={nh.notes} placeholder="Early check-in, preferences…" onChange={v=>setNh(p=>({...p,notes:v}))} multi rows={2}/>
+          <BookingUpload
+            files={nh.bookingFiles||[]}
+            onAdd={f=>setNh(p=>({...p,bookingFiles:[...(p.bookingFiles||[]),f]}))}
+            onRemove={i=>setNh(p=>({...p,bookingFiles:p.bookingFiles.filter((_,pi)=>pi!==i)}))}
+            palette={palette}/>
+          <div style={{ display:"flex",gap:8 }}>
+            <button onClick={addH} disabled={!nh.name.trim()} style={{ flex:1,background:nh.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nh.name.trim()?"pointer":"not-allowed" }}>Add Hotel</button>
+            <button onClick={()=>setShowAdd(false)} style={{ flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer" }}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {trip.hotels.map(h=>{
+        const nights=nightsBetween(h.checkIn,h.checkOut),du=daysUntil(h.checkIn);
+        const active=new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date();
+        const past=new Date(h.checkOut+"T00:00:00")<new Date();
+        const hasFiles=(h.bookingFiles||[]).length>0;
+        return(
+          <div key={h.id} style={{ background:"#fff",borderRadius:20,border:`1.5px solid ${active?palette.primary+"44":palette.border}`,marginBottom:12,overflow:"hidden",opacity:past?0.65:1,boxShadow:active?`0 4px 20px ${palette.primary}18`:"0 1px 8px rgba(0,0,0,0.04)" }}>
+            {active&&<div style={{ background:`linear-gradient(90deg,${palette.primary},${palette.accent})`,height:4 }}/>}
+            <div style={{ padding:"16px 18px" }}>
+              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10 }}>
+                <div>
+                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:5 }}>
+                    <span style={{ background:cityColor(h.city)+"20",color:cityColor(h.city),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99 }}>{h.city}</span>
+                    {active&&<span style={{ background:palette.primaryLight,color:palette.primary,fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:99 }}>STAYING HERE</span>}
+                    {hasFiles&&<span style={{ fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"2px 8px",borderRadius:99,fontWeight:700 }}>📄 Docs</span>}
+                  </div>
+                  <h3 style={{ fontSize:16,fontWeight:700,color:palette.text,margin:0 }}>{h.name}</h3>
+                </div>
+                <div style={{ textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
+                  <div><div style={{ fontSize:20,fontWeight:800,color:palette.primary }}>{nights}</div><div style={{ fontSize:11,color:palette.muted,fontWeight:600 }}>night{nights!==1?"s":""}</div></div>
+                  <button onClick={()=>setDelId(h.id)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"5px 7px",cursor:"pointer" }}><Trash2 size={12}/></button>
+                </div>
+              </div>
+              <div style={{ background:"#FAF8F9",borderRadius:12,padding:"10px 12px",marginBottom:10,display:"flex",justifyContent:"space-between" }}>
+                <div><p style={{ fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px" }}>CHECK IN</p><p style={{ fontSize:13,fontWeight:700,color:palette.text,margin:0 }}>{fmtDate(h.checkIn)}</p></div>
+                <div style={{ width:1,background:palette.border }}/>
+                <div style={{ textAlign:"right" }}><p style={{ fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px" }}>CHECK OUT</p><p style={{ fontSize:13,fontWeight:700,color:palette.text,margin:0 }}>{fmtDate(h.checkOut)}</p></div>
+              </div>
+              {!past&&du>0&&<p style={{ fontSize:11,color:palette.muted,margin:"0 0 10px",textAlign:"center" }}>Check-in in {du} day{du!==1?"s":""}</p>}
+              <div style={{ display:"flex",gap:8 }}>
+                {h.confirmation&&<button onClick={()=>copy(h.id,h.confirmation)} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:copied===h.id?"#DFF0E1":palette.primaryLight,color:copied===h.id?"#3A6B42":palette.primary,border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.2s" }}>{copied===h.id?<Check size={13}/>:<Copy size={13}/>}{copied===h.id?"Copied!":h.confirmation}</button>}
+                {h.address&&<a href={`https://maps.google.com/?q=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer" style={{ display:"flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,borderRadius:10,padding:"10px 14px",fontSize:12,fontWeight:700,textDecoration:"none" }}><MapPin size={13}/>Map</a>}
+              </div>
+              {hasFiles&&(
+                <div style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${palette.border}` }}>
+                  <p style={{ fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 6px" }}>BOOKING DOCUMENTS</p>
+                  <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
+                    {h.bookingFiles.map((f,i)=>(
+                      <button key={i} onClick={()=>{ const a=document.createElement("a"); a.href=f.data; a.download=f.name; a.click(); }}
+                        style={{ display:"inline-flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
+                        📄 {f.name}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+              {h.notes&&<p style={{ fontSize:12,color:palette.muted,margin:"10px 0 0",lineHeight:1.4 }}>{h.notes}</p>}
+            </div>
+          </div>
+        );
+      })}
+      {trip.hotels.length===0&&<div style={{ textAlign:"center",padding:"60px 0",color:palette.muted }}><div style={{ fontSize:40,marginBottom:12 }}>🏨</div><p>No hotels yet</p></div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// SETTINGS VIEW
+// ══════════════════════════════════════════════════════════════
+function SettingsView({ trip, palette, paletteName, setPaletteName, onUpdate, onReset, onImportNew }) {
+  const [edit,setEdit]=useState(false);
+  const [tn,setTn]=useState(trip.tripName);
+  const [sd,setSd]=useState(trip.startDate);
+  const [ed,setEd]=useState(trip.endDate);
+  const [confirmReset,setConfirmReset]=useState(false);
+  const save=()=>{ onUpdate("meta",{tripName:tn,startDate:sd,endDate:ed}); setEdit(false); };
+
+  return (
+    <div style={{ padding:"24px 20px 40px" }}>
+      {confirmReset&&<Confirm message="Permanently delete this trip and all its data?" onOk={()=>{ setConfirmReset(false); onReset(); }} onNo={()=>setConfirmReset(false)}/>}
+      <h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 20px" }}>Settings</h2>
+
+      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14 }}>
+        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
+          <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:0 }}>Trip Info</p>
+          <button onClick={()=>{ setTn(trip.tripName); setSd(trip.startDate); setEd(trip.endDate); setEdit(v=>!v); }} style={{ background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>{edit?"Cancel":"Edit"}</button>
+        </div>
+        {edit?(<>
+          <Inp label="Trip Name" value={tn} onChange={setTn}/>
+          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}><Inp label="Start" type="date" value={sd} onChange={setSd}/><Inp label="End" type="date" value={ed} onChange={setEd}/></div>
+          <button onClick={save} style={{ background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer" }}>Save Changes</button>
+        </>):(
+          <><p style={{ fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>{trip.tripName}</p><p style={{ fontSize:13,color:palette.muted,margin:0 }}>{fmtDate(trip.startDate)} — {fmtDate(trip.endDate)}</p></>
+        )}
+      </div>
+
+      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14 }}>
+        <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>Colour Theme</p>
+        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+          {Object.entries(PALETTES).map(([name,p])=>(
+            <button key={name} onClick={()=>setPaletteName(name)} style={{ background:p.primaryLight,border:`2.5px solid ${paletteName===name?p.primary:"transparent"}`,borderRadius:14,padding:"12px 14px",cursor:"pointer",textAlign:"left",transition:"all 0.15s" }}>
+              <div style={{ width:26,height:26,borderRadius:"50%",background:p.primary,marginBottom:6 }}/>
+              <p style={{ fontSize:12,fontWeight:700,color:p.text,margin:0 }}>{p.name}</p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Multi-user instructions */}
+      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14 }}>
+        <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 10px" }}>👥 Share with Others</p>
+        <p style={{ fontSize:13,color:palette.muted,margin:"0 0 10px",lineHeight:1.6 }}>
+          Kumo stores data locally in each browser. To let others use their own trips:
+        </p>
+        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
+          <div style={{ background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}` }}>
+            <p style={{ fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Option 1 — Share the URL</p>
+            <p style={{ fontSize:12,color:palette.muted,margin:0,lineHeight:1.5 }}>Anyone with your Vercel URL can open Kumo in their own browser. Their data is completely separate from yours — each device has its own storage.</p>
+          </div>
+          <div style={{ background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}` }}>
+            <p style={{ fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Option 2 — Add to Home Screen</p>
+            <p style={{ fontSize:12,color:palette.muted,margin:0,lineHeight:1.5 }}>Each person opens the URL in Safari/Chrome, adds to their home screen, and uses it as their own private app — data never mixes.</p>
+          </div>
+          <div style={{ background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}` }}>
+            <p style={{ fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Option 3 — Cloud sync (future)</p>
+            <p style={{ fontSize:12,color:palette.muted,margin:0,lineHeight:1.5 }}>Adding a backend (Supabase, Firebase) would allow real accounts and shared trips. This is a planned upgrade.</p>
+          </div>
+        </div>
+      </div>
+
+      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20 }}>
+        <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 12px" }}>Data</p>
+        <button onClick={onImportNew} style={{ display:"block",width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:10 }}>📥 Import / Replace Excel File</button>
+        <button onClick={()=>setConfirmReset(true)} style={{ display:"block",width:"100%",background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer" }}>🗑️ Delete This Trip</button>
+      </div>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// ROOT APP
+// ══════════════════════════════════════════════════════════════
 export default function App() {
   const [paletteName, setPaletteName] = useState("sakura");
   const [trips, setTrips]             = useState([]);
@@ -1169,61 +1611,57 @@ export default function App() {
   const [view, setView]               = useState("home");
   const palette = PALETTES[paletteName];
 
-  // ── Load from localStorage ──
   useEffect(() => {
     try {
-      const saved       = localStorage.getItem("kumo_trips_v3");
-      const savedP      = localStorage.getItem("kumo_palette");
-      const savedActive = localStorage.getItem("kumo_active_v3");
+      const saved   = localStorage.getItem("kumo_trips_v3");
+      const savedP  = localStorage.getItem("kumo_palette");
+      const savedAct= localStorage.getItem("kumo_active_v3");
       if (saved) {
         const parsed = JSON.parse(saved);
-        setTrips(parsed);
-        if (savedActive && parsed.find(t => t.id === savedActive)) setActiveTripId(savedActive);
+        // Ensure every trip has all required fields (migrations)
+        const migrated = parsed.map(t => ({
+          memories:[], expenses:[], budget:{amount:"",currency:"USD"},
+          route:{stops:[],travelMode:"walking"}, ...t
+        }));
+        setTrips(migrated);
+        if (savedAct && migrated.find(t=>t.id===savedAct)) setActiveTripId(savedAct);
       }
       if (savedP && PALETTES[savedP]) setPaletteName(savedP);
     } catch(e) { console.error("Load error:", e); }
   }, []);
 
-  // ── Persist ──
-  useEffect(() => { try { localStorage.setItem("kumo_trips_v3", JSON.stringify(trips)); } catch(e) { console.error("Save error:", e); } }, [trips]);
+  useEffect(() => { try { localStorage.setItem("kumo_trips_v3", JSON.stringify(trips)); } catch(e) {} }, [trips]);
   useEffect(() => { localStorage.setItem("kumo_palette", paletteName); }, [paletteName]);
   useEffect(() => { if (activeTripId) localStorage.setItem("kumo_active_v3", activeTripId); }, [activeTripId]);
 
-  const activeTrip = trips.find(t => t.id === activeTripId) || null;
+  const activeTrip = trips.find(t=>t.id===activeTripId) || null;
 
-  // ── Trip CRUD ──
   const createTrip = () => {
-    const t = emptyTrip(`Trip ${trips.length + 1}`);
-    setTrips(prev => [...prev, t]);
-    setActiveTripId(t.id);
-    setView("home");
+    const t = { id:uid(), tripName:`Trip ${trips.length+1}`, startDate:"", endDate:"",
+      itinerary:[], restaurants:[], hotels:[], memories:[], expenses:[],
+      budget:{amount:"",currency:"USD"}, route:{stops:[],travelMode:"walking"} };
+    setTrips(prev=>[...prev,t]); setActiveTripId(t.id); setView("home");
   };
 
   const importTrip = (trip) => {
-    // Ensure every trip field exists (backwards compat)
-    const safe = { memories:[], route:{stops:[],travelMode:"walking"}, ...trip };
-    setTrips(prev => {
-      const exists = prev.find(t => t.id === safe.id);
-      return exists ? prev.map(t => t.id === safe.id ? safe : t) : [...prev, safe];
-    });
-    setActiveTripId(safe.id);
-    setView("home");
+    const safe = { memories:[], expenses:[], budget:{amount:"",currency:"USD"},
+      route:{stops:[],travelMode:"walking"}, ...trip };
+    setTrips(prev => { const ex=prev.find(t=>t.id===safe.id); return ex ? prev.map(t=>t.id===safe.id?safe:t) : [...prev,safe]; });
+    setActiveTripId(safe.id); setView("home");
   };
 
-  // FIX: useCallback so reference is stable — prevents stale closure bugs that
-  // caused route/restaurant state to reset when switching tabs
+  const deleteTrip = (id) => {
+    setTrips(prev=>prev.filter(t=>t.id!==id));
+    if (activeTripId===id) setActiveTripId(null);
+  };
+
   const updateTrip = useCallback((section, value) => {
     setTrips(prev => prev.map(t => {
       if (t.id !== activeTripId) return t;
       if (section === "meta") return { ...t, ...value };
-      return { ...t, [section]: value };
+      return { ...t, [section]:value };
     }));
   }, [activeTripId]);
-
-  const deleteTrip = (id) => {
-    setTrips(prev => prev.filter(t => t.id !== id));
-    setActiveTripId(null);
-  };
 
   const NAV = [
     { id:"home",        label:"Home",      Icon:Home },
@@ -1231,20 +1669,19 @@ export default function App() {
     { id:"restaurants", label:"Eats",      Icon:Utensils },
     { id:"hotels",      label:"Hotels",    Icon:Hotel },
     { id:"transport",   label:"Transport", Icon:Train },
+    { id:"finances",    label:"Finances",  Icon:Star },
     { id:"route",       label:"Route",     Icon:MapPin },
     { id:"memories",    label:"Memories",  Icon:Camera },
     { id:"settings",    label:"Settings",  Icon:Settings },
   ];
+  const mobileNav = NAV.filter(n=>["home","itinerary","restaurants","finances","memories"].includes(n.id));
+  const unbooked = activeTrip ? activeTrip.itinerary.filter(d=>d.bookingStatus==="needs booking").length : 0;
 
-  const mobileNav = NAV.filter(n => ["home","itinerary","restaurants","route","memories"].includes(n.id));
-  const unbooked  = activeTrip ? activeTrip.itinerary.filter(d => d.bookingStatus === "needs booking").length : 0;
-
-  // ── No trip selected → trip selector ──
   if (!activeTripId || !activeTrip) {
     return (
       <>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
-        <TripSelector trips={trips} onSelect={id => { setActiveTripId(id); setView("home"); }} onCreate={createTrip} onImport={importTrip} palette={palette}/>
+        <TripSelector trips={trips} onSelect={id=>{setActiveTripId(id);setView("home");}} onCreate={createTrip} onImport={importTrip} onDelete={deleteTrip} palette={palette}/>
       </>
     );
   }
@@ -1257,98 +1694,88 @@ export default function App() {
       case "restaurants": return <RestaurantsView {...p}/>;
       case "hotels":      return <HotelsView      {...p}/>;
       case "transport":   return <TransportView   {...p}/>;
+      case "finances":    return <FinancesView    {...p}/>;
       case "route":       return <RoutePlannerView {...p}/>;
       case "memories":    return <MemoriesView    {...p}/>;
-      case "settings":    return <SettingsView    {...p} paletteName={paletteName} setPaletteName={setPaletteName} onReset={() => deleteTrip(activeTripId)} onImportNew={() => setActiveTripId(null)}/>;
+      case "settings":    return <SettingsView    {...p} paletteName={paletteName} setPaletteName={setPaletteName} onReset={()=>deleteTrip(activeTripId)} onImportNew={()=>setActiveTripId(null)}/>;
       default:            return <HomeView        {...p} setView={setView}/>;
     }
   };
 
   return (
-    <div style={{minHeight:"100vh",background:palette.bg,fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
+    <div style={{ minHeight:"100vh", background:palette.bg, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
       <style>{`
-        @media(min-width:768px){
-          .km-mob-nav{display:none!important;}
-          .km-topbar{display:none!important;}
-          .km-sidebar{display:flex!important;}
-          .km-content{margin-left:240px;}
-        }
-        @media(max-width:767px){
-          .km-sidebar{display:none!important;}
-          .km-content{margin-left:0;padding-bottom:80px;}
-        }
+        @media(min-width:768px){.km-mob-nav{display:none!important;}.km-topbar{display:none!important;}.km-sidebar{display:flex!important;}.km-content{margin-left:240px;}}
+        @media(max-width:767px){.km-sidebar{display:none!important;}.km-content{margin-left:0;padding-bottom:80px;}}
         *{box-sizing:border-box;}
         ::-webkit-scrollbar{width:4px;height:4px;}
         ::-webkit-scrollbar-thumb{background:#D0C8CA;border-radius:99px;}
       `}</style>
 
-      {/* ── DESKTOP SIDEBAR ── */}
-      <div className="km-sidebar" style={{display:"none",position:"fixed",left:0,top:0,bottom:0,width:240,background:"#fff",borderRight:`1px solid ${palette.border}`,flexDirection:"column",zIndex:300,padding:"24px 0 20px"}}>
-        <div style={{padding:"0 20px 16px",borderBottom:`1px solid ${palette.border}`}}>
-          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
-            <span style={{fontSize:24}}>☁️</span>
+      {/* DESKTOP SIDEBAR */}
+      <div className="km-sidebar" style={{ display:"none",position:"fixed",left:0,top:0,bottom:0,width:240,background:"#fff",borderRight:`1px solid ${palette.border}`,flexDirection:"column",zIndex:300,padding:"24px 0 20px" }}>
+        <div style={{ padding:"0 20px 16px",borderBottom:`1px solid ${palette.border}` }}>
+          <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:14 }}>
+            <span style={{ fontSize:24 }}>☁️</span>
             <div>
-              <div style={{fontSize:15,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif"}}>Kumo</div>
-              <div style={{fontSize:10,color:palette.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em"}}>Travel Planner</div>
+              <div style={{ fontSize:15,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif" }}>Kumo</div>
+              <div style={{ fontSize:10,color:palette.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em" }}>Travel Planner</div>
             </div>
           </div>
-          {/* Trip switcher */}
-          <button onClick={() => setActiveTripId(null)} style={{width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{activeTrip.tripName}</span>
-            <span style={{fontSize:10,opacity:0.65,marginLeft:6,flexShrink:0}}>↕ trips</span>
+          <button onClick={()=>setActiveTripId(null)} style={{ width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+            <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1 }}>{activeTrip.tripName}</span>
+            <span style={{ fontSize:10,opacity:0.65,marginLeft:6,flexShrink:0 }}>↕ trips</span>
           </button>
         </div>
-        <nav style={{flex:1,padding:"12px",overflowY:"auto"}}>
-          {NAV.map(({id,label,Icon}) => (
-            <button key={id} onClick={() => setView(id)} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:view===id?palette.primaryLight:"transparent",color:view===id?palette.primary:palette.muted,border:"none",borderRadius:12,padding:"11px 14px",fontSize:13,fontWeight:view===id?700:500,cursor:"pointer",textAlign:"left",transition:"all 0.15s",marginBottom:2}}>
+        <nav style={{ flex:1,padding:"12px",overflowY:"auto" }}>
+          {NAV.map(({id,label,Icon})=>(
+            <button key={id} onClick={()=>setView(id)} style={{ display:"flex",alignItems:"center",gap:12,width:"100%",background:view===id?palette.primaryLight:"transparent",color:view===id?palette.primary:palette.muted,border:"none",borderRadius:12,padding:"11px 14px",fontSize:13,fontWeight:view===id?700:500,cursor:"pointer",textAlign:"left",transition:"all 0.15s",marginBottom:2 }}>
               <Icon size={17} strokeWidth={view===id?2.5:1.8}/>{label}
-              {id==="transport"&&unbooked>0&&<span style={{marginLeft:"auto",background:"#E05C5C",color:"#fff",fontSize:10,fontWeight:800,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>{unbooked}</span>}
+              {id==="transport"&&unbooked>0&&<span style={{ marginLeft:"auto",background:"#E05C5C",color:"#fff",fontSize:10,fontWeight:800,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center" }}>{unbooked}</span>}
             </button>
           ))}
         </nav>
-        <div style={{padding:"12px 20px",borderTop:`1px solid ${palette.border}`}}>
-          <button onClick={createTrip} style={{width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"9px 0",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}>
+        <div style={{ padding:"12px 20px",borderTop:`1px solid ${palette.border}` }}>
+          <button onClick={createTrip} style={{ width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"9px 0",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6 }}>
             <Plus size={14}/>New Trip
           </button>
         </div>
       </div>
 
-      {/* ── MOBILE TOP BAR ── */}
-      <div className="km-topbar" style={{position:"sticky",top:0,zIndex:200,background:palette.bg,borderBottom:`1px solid ${palette.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-        <button onClick={() => setActiveTripId(null)} style={{display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:0}}>
-          <span style={{fontSize:18}}>☁️</span>
-          <span style={{fontSize:14,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif"}}>Kumo</span>
+      {/* MOBILE TOP BAR */}
+      <div className="km-topbar" style={{ position:"sticky",top:0,zIndex:200,background:palette.bg,borderBottom:`1px solid ${palette.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
+        <button onClick={()=>setActiveTripId(null)} style={{ display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:0 }}>
+          <span style={{ fontSize:18 }}>☁️</span>
+          <span style={{ fontSize:14,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif" }}>Kumo</span>
         </button>
-        <span style={{fontSize:11,fontWeight:700,color:palette.primary,maxWidth:130,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{activeTrip.tripName}</span>
-        <div style={{display:"flex",gap:4}}>
-          <button onClick={() => setView("hotels")} style={{background:view==="hotels"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer"}}>
-            <Hotel size={17} color={view==="hotels"?palette.primary:palette.muted}/>
+        <span style={{ fontSize:11,fontWeight:700,color:palette.primary,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{activeTrip.tripName}</span>
+        <div style={{ display:"flex",gap:4 }}>
+          <button onClick={()=>setView("route")} style={{ background:view==="route"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer" }}>
+            <MapPin size={17} color={view==="route"?palette.primary:palette.muted}/>
           </button>
-          <button onClick={() => setView("transport")} style={{background:view==="transport"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer",position:"relative"}}>
+          <button onClick={()=>setView("transport")} style={{ background:view==="transport"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer",position:"relative" }}>
             <Train size={17} color={view==="transport"?palette.primary:palette.muted}/>
-            {unbooked>0&&<span style={{position:"absolute",top:2,right:2,width:6,height:6,borderRadius:"50%",background:"#E05C5C",border:"1.5px solid "+palette.bg}}/>}
+            {unbooked>0&&<span style={{ position:"absolute",top:2,right:2,width:6,height:6,borderRadius:"50%",background:"#E05C5C",border:"1.5px solid "+palette.bg }}/>}
           </button>
-          <button onClick={() => setView("settings")} style={{background:view==="settings"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer"}}>
+          <button onClick={()=>setView("settings")} style={{ background:view==="settings"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer" }}>
             <Settings size={17} color={view==="settings"?palette.primary:palette.muted}/>
           </button>
         </div>
       </div>
 
-      {/* ── MAIN CONTENT ── */}
-      <div className="km-content" style={{minHeight:"100vh"}}>
-        <div style={{maxWidth:900,margin:"0 auto"}}>
-          {renderView()}
-        </div>
+      {/* MAIN */}
+      <div className="km-content" style={{ minHeight:"100vh" }}>
+        <div style={{ maxWidth:900,margin:"0 auto" }}>{renderView()}</div>
       </div>
 
-      {/* ── MOBILE BOTTOM NAV ── */}
-      <div className="km-mob-nav" style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:`1px solid ${palette.border}`,display:"flex",justifyContent:"space-around",padding:"8px 0 14px",zIndex:200}}>
-        {mobileNav.map(({id,label,Icon}) => (
-          <button key={id} onClick={() => setView(id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",color:view===id?palette.primary:palette.muted}}>
+      {/* MOBILE BOTTOM NAV */}
+      <div className="km-mob-nav" style={{ position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:`1px solid ${palette.border}`,display:"flex",justifyContent:"space-around",padding:"8px 0 14px",zIndex:200 }}>
+        {mobileNav.map(({id,label,Icon})=>(
+          <button key={id} onClick={()=>setView(id)} style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",color:view===id?palette.primary:palette.muted }}>
             <Icon size={20} strokeWidth={view===id?2.5:1.8}/>
-            <span style={{fontSize:9,fontWeight:view===id?700:500}}>{label}</span>
-            {view===id&&<div style={{width:16,height:2.5,background:palette.primary,borderRadius:99}}/>}
+            <span style={{ fontSize:9,fontWeight:view===id?700:500 }}>{label}</span>
+            {view===id&&<div style={{ width:16,height:2.5,background:palette.primary,borderRadius:99 }}/>}
           </button>
         ))}
       </div>
