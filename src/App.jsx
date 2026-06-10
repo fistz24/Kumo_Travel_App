@@ -193,6 +193,10 @@ const DEMO_TRIP = {
 };
 
 // ─── SHARED COMPONENTS ───────────────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════
+// SHARED COMPONENTS
+// ══════════════════════════════════════════════════════════════
 function TransBadge({ type }) {
   const m = TRANSPORT_META[type] || TRANSPORT_META.other;
   return <span style={{display:"inline-flex",alignItems:"center",gap:4,background:m.colors[0],color:m.colors[1],fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:99}}><m.Icon size={11}/>{m.label}</span>;
@@ -202,10 +206,10 @@ function Inp({ label, value, onChange, type="text", placeholder="", multi, rows=
   const base = {width:"100%",border:"1px solid #EDE5E7",borderRadius:10,padding:"9px 11px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",color:"#2D2426",background:"#FAF8F9"};
   return (
     <div style={{marginBottom:12,...sx}}>
-      {label && <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>{label}</label>}
-      {multi ? <textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{...base,resize:"vertical"}}/>
-      : opts ? <select value={value} onChange={e=>onChange(e.target.value)} style={base}>{opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}</select>
-      : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={base}/>}
+      {label&&<label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>{label}</label>}
+      {multi?<textarea value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} rows={rows} style={{...base,resize:"vertical"}}/>
+      :opts?<select value={value} onChange={e=>onChange(e.target.value)} style={base}>{opts.map(o=><option key={o.v||o} value={o.v||o}>{o.l||o}</option>)}</select>
+      :<input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={base}/>}
     </div>
   );
 }
@@ -233,73 +237,219 @@ function CityDialog({ onOk, onNo, palette }) {
         <input autoFocus value={v} onChange={e=>setV(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&v.trim())onOk(v.trim());if(e.key==="Escape")onNo();}} placeholder="e.g. Paris, Bali, New York…" style={{width:"100%",border:"1px solid #EDE5E7",borderRadius:10,padding:"10px 12px",fontSize:14,fontFamily:"inherit",outline:"none",boxSizing:"border-box",color:"#2D2426",marginBottom:16}}/>
         <div style={{display:"flex",gap:10}}>
           <button onClick={onNo} style={{flex:1,background:"#F5F0F2",color:"#9A8F92",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>Cancel</button>
-          <button onClick={()=>{if(v.trim())onOk(v.trim());}} disabled={!v.trim()} style={{flex:1,background:v.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:v.trim()?"pointer":"not-allowed"}}>Add City</button>
+          <button onClick={()=>{if(v.trim())onOk(v.trim());}} disabled={!v.trim()} style={{flex:1,background:v.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:v.trim()?"pointer":"not-allowed"}}>Add</button>
         </div>
       </div>
     </div>
   );
 }
 
-// ─── TRIP SELECTOR ────────────────────────────────────────────────────────────
+// ── Cuisine autocomplete ──────────────────────────────────────
+const CUISINE_LIST = ["American","Bakery","BBQ","Brunch","Burger","Café","Chinese","Cocktail Bar","Dim Sum","Ethiopian","Filipino","Fine Dining","French","Fusion","Greek","Hot Pot","Indian","Indonesian","Izakaya","Italian","Japanese","Kaiseki","Korean","Latin","Malaysian","Mediterranean","Mexican","Middle Eastern","Noodles","Okonomiyaki","Omakase","Pasta","Persian","Pizza","Ramen","Seafood","Shabu-shabu","Soba","Spanish","Sri Lankan","Steak","Street Food","Sushi","Tapas","Thai","Turkish","Udon","Vegan","Vietnamese","Wine Bar","Yakitori"];
+
+function CuisineInput({ value, onChange, palette }) {
+  const [open,setOpen]=useState(false);
+  const [q,setQ]=useState(value||"");
+  const ref=useRef();
+  useEffect(()=>{setQ(value||"");},[value]);
+  const filtered = q.length>0 ? CUISINE_LIST.filter(c=>c.toLowerCase().includes(q.toLowerCase())).slice(0,7) : CUISINE_LIST.slice(0,7);
+  const pick=(v)=>{setQ(v);onChange(v);setOpen(false);};
+  useEffect(()=>{const fn=(e)=>{if(ref.current&&!ref.current.contains(e.target))setOpen(false);};document.addEventListener("mousedown",fn);return()=>document.removeEventListener("mousedown",fn);},[]);
+  return (
+    <div ref={ref} style={{position:"relative",marginBottom:12}}>
+      <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em"}}>Cuisine</label>
+      <input value={q} onChange={e=>{setQ(e.target.value);onChange(e.target.value);setOpen(true);}} onFocus={()=>setOpen(true)} placeholder="Type or pick — e.g. Ramen…"
+        style={{width:"100%",border:"1px solid #EDE5E7",borderRadius:10,padding:"9px 11px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",color:"#2D2426",background:"#FAF8F9"}}/>
+      {open&&filtered.length>0&&(
+        <div style={{position:"absolute",top:"calc(100% + 2px)",left:0,right:0,background:"#fff",border:"1px solid #EDE5E7",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,0.13)",zIndex:600,overflow:"hidden"}}>
+          {filtered.map(c=><div key={c} onMouseDown={()=>pick(c)} style={{padding:"10px 14px",fontSize:13,cursor:"pointer",color:"#2D2426",borderBottom:"1px solid #F8F4F5"}} onMouseEnter={e=>e.currentTarget.style.background="#FAF7F8"} onMouseLeave={e=>e.currentTarget.style.background="#fff"}>{c}</div>)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Media/file upload (images + PDFs) ─────────────────────────
+function MediaUpload({ files, onAdd, onRemove, label="Attachments", palette, accept="image/*,.pdf" }) {
+  const ref=useRef();
+  const read=(file)=>new Promise(res=>{const r=new FileReader();r.onload=e=>res({name:file.name,type:file.type,data:e.target.result});r.readAsDataURL(file);});
+  const handle=async(fl)=>{const results=await Promise.all(Array.from(fl).map(read));results.forEach(f=>onAdd(f));};
+  const open=(f)=>{const a=document.createElement("a");a.href=f.data;a.download=f.name;a.click();};
+  const isPDF=(f)=>f.type==="application/pdf"||f.name?.endsWith(".pdf");
+  const isImg=(f)=>f.type?.startsWith("image/");
+  return (
+    <div style={{marginBottom:12}}>
+      <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>{label}</label>
+      {(files||[]).length>0&&(
+        <div style={{marginBottom:8}}>
+          {/* Image grid */}
+          {(files||[]).filter(f=>isImg(f)).length>0&&(
+            <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:6,marginBottom:6}}>
+              {(files||[]).filter(f=>isImg(f)).map((f,i)=>(
+                <div key={i} style={{position:"relative"}}>
+                  <img src={f.data} alt="" style={{width:"100%",aspectRatio:"1",objectFit:"cover",borderRadius:8,cursor:"pointer"}} onClick={()=>open(f)}/>
+                  <button onClick={()=>onRemove(files.indexOf(f))} style={{position:"absolute",top:2,right:2,background:"rgba(0,0,0,0.65)",color:"#fff",border:"none",borderRadius:"50%",width:18,height:18,cursor:"pointer",fontSize:10,display:"flex",alignItems:"center",justifyContent:"center"}}>×</button>
+                </div>
+              ))}
+            </div>
+          )}
+          {/* Doc list */}
+          {(files||[]).filter(f=>!isImg(f)).map((f,i)=>(
+            <div key={i} style={{display:"flex",alignItems:"center",gap:8,background:"#FAF8F9",borderRadius:10,padding:"8px 12px",border:"1px solid #EDE5E7",marginBottom:5}}>
+              <span style={{fontSize:16}}>{isPDF(f)?"📄":"📎"}</span>
+              <span style={{flex:1,fontSize:12,fontWeight:600,color:"#2D2426",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{f.name}</span>
+              <button onClick={()=>open(f)} style={{background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}>View</button>
+              <button onClick={()=>onRemove(files.indexOf(f))} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"4px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+            </div>
+          ))}
+        </div>
+      )}
+      <button onClick={()=>ref.current.click()} style={{display:"flex",alignItems:"center",gap:6,background:"#F5F0F2",color:"#9A8F92",border:"1px dashed #D0C8CA",borderRadius:10,padding:"9px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+        <Camera size={13}/>Add photos or docs
+      </button>
+      <input ref={ref} type="file" accept={accept} multiple style={{display:"none"}} onChange={e=>handle(e.target.files)}/>
+    </div>
+  );
+}
+
+// ── Star rating ───────────────────────────────────────────────
+function StarRating({ value, onChange, size=20 }) {
+  const [hover,setHover]=useState(0);
+  return (
+    <div style={{display:"flex",gap:2}}>
+      {[1,2,3,4,5].map(n=>(
+        <button key={n} onClick={()=>onChange(n)} onMouseEnter={()=>setHover(n)} onMouseLeave={()=>setHover(0)}
+          style={{fontSize:size,background:"none",border:"none",cursor:"pointer",lineHeight:1,padding:"0 1px",transition:"transform 0.1s",transform:(hover>=n||(!hover&&value>=n))?"scale(1.1)":"scale(1)"}}>
+          {(hover>=n||(!hover&&value>=n))?"⭐":"☆"}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// BOARDING PASS DESIGN ELEMENTS
+// ══════════════════════════════════════════════════════════════
+function BoardingPassCard({ children, palette, accent, style={} }) {
+  return (
+    <div style={{background:"#fff",borderRadius:20,overflow:"hidden",boxShadow:"0 2px 16px rgba(0,0,0,0.07)",position:"relative",...style}}>
+      {/* Top color strip */}
+      <div style={{height:4,background:`linear-gradient(90deg,${palette.primary},${palette.accent})`}}/>
+      {/* Perforation line */}
+      <div style={{position:"absolute",left:0,right:0,top:44,height:1,background:"repeating-linear-gradient(90deg,#EDE5E7 0px,#EDE5E7 6px,transparent 6px,transparent 12px)"}}/>
+      <div style={{paddingTop:2}}>{children}</div>
+    </div>
+  );
+}
+
+// Stamp-style badge for cities
+function CityStamp({ city, small }) {
+  const c = cityColor(city);
+  const sz = small ? 44 : 56;
+  return (
+    <div style={{width:sz,height:sz,borderRadius:"50%",border:`2px dashed ${c}`,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0,background:c+"12",flexDirection:"column"}}>
+      <span style={{fontSize:small?8:9,fontWeight:800,color:c,textTransform:"uppercase",letterSpacing:"0.04em",textAlign:"center",lineHeight:1.2,padding:"0 2px"}}>{city?.slice(0,6)}</span>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOME VIEW — boarding pass style
+// ══════════════════════════════════════════════════════════════
 function HomeView({ trip, palette, setView }) {
-  const du = daysUntil(trip.startDate);
-  const totalDays = nightsBetween(trip.startDate, trip.endDate)+1;
-  const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
-  const nb = trip.itinerary.filter(d=>d.bookingStatus==="needs booking");
-  const today = trip.itinerary.find(d=>isToday(d.date));
-  const next  = trip.itinerary.find(d=>!isPast(d.date)&&!isToday(d.date));
-  const hl    = today||next;
-  const activeHotel = trip.hotels.find(h=>new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date());
-  const lastMemory  = (trip.memories||[]).slice(-1)[0];
+  const du=daysUntil(trip.startDate);
+  const totalDays=nightsBetween(trip.startDate,trip.endDate)+1;
+  const cities=[...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
+  const nb=trip.itinerary.filter(d=>d.bookingStatus==="needs booking");
+  const today=trip.itinerary.find(d=>isToday(d.date));
+  const next=trip.itinerary.find(d=>!isPast(d.date)&&!isToday(d.date));
+  const hl=today||next;
+  const activeHotel=trip.hotels.find(h=>new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date());
+  const lastMemory=(trip.memories||[]).slice(-1)[0];
 
   return (
-    <div style={{padding:"24px 20px 40px"}}>
+    <div style={{padding:"20px 16px 40px"}}>
+      {/* Trip name */}
       <div style={{marginBottom:20}}>
-        <p style={{fontSize:11,fontWeight:800,color:palette.primary,textTransform:"uppercase",letterSpacing:"0.1em",margin:"0 0 4px"}}>My Trip</p>
-        <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:26,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{trip.tripName}</h1>
-        <p style={{color:palette.muted,fontSize:13,margin:0}}>{fmtDate(trip.startDate)} — {fmtDate(trip.endDate)}</p>
+        <p style={{fontSize:11,fontWeight:800,color:palette.primary,textTransform:"uppercase",letterSpacing:"0.12em",margin:"0 0 4px"}}>My Trip</p>
+        <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:26,fontWeight:700,color:palette.text,margin:0,letterSpacing:"-0.02em"}}>{trip.tripName}</h1>
       </div>
 
-      {/* Countdown hero */}
-      <div style={{background:`linear-gradient(135deg,${palette.primary},${palette.accent})`,borderRadius:22,padding:"22px 24px",marginBottom:16,color:"#fff",position:"relative",overflow:"hidden"}}>
-        <div style={{position:"absolute",right:-30,top:-30,width:130,height:130,borderRadius:"50%",background:"rgba(255,255,255,0.09)"}}/>
-        <div style={{position:"absolute",right:20,bottom:-35,width:90,height:90,borderRadius:"50%",background:"rgba(255,255,255,0.06)"}}/>
-        {du>0&&<><p style={{margin:"0 0 4px",fontSize:13,opacity:0.85}}>Trip starts in</p><div style={{display:"flex",alignItems:"baseline",gap:8}}><span style={{fontSize:50,fontWeight:800,lineHeight:1}}>{du}</span><span style={{fontSize:18,opacity:0.85}}>days</span></div><p style={{margin:"8px 0 0",fontSize:13,opacity:0.8}}>✈️ {totalDays} days · {cities.length} {cities.length===1?"city":"cities"}</p></>}
-        {du===0&&<><p style={{margin:"0 0 8px",fontSize:18,fontWeight:700}}>🎉 Today is the day!</p><p style={{margin:0,fontSize:13,opacity:0.85}}>Your adventure begins!</p></>}
-        {du<0&&<><p style={{margin:"0 0 4px",fontSize:13,opacity:0.85}}>Trip in progress</p><p style={{fontSize:20,fontWeight:800,margin:0}}>Day {Math.abs(du)+1} of {totalDays}</p><p style={{margin:"4px 0 0",fontSize:13,opacity:0.8}}>{cities.length} cities · {trip.itinerary.length} days planned</p></>}
-      </div>
-
-      {/* Today/next card */}
-      {hl&&(
-        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
-          <p style={{fontSize:11,fontWeight:800,color:palette.primary,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 10px"}}>{today?"Today":`Up next — Day ${hl.dayNum}`}</p>
-          <div style={{display:"flex",gap:12,justifyContent:"space-between"}}>
-            <div style={{flex:1}}>
-              <h3 style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{hl.city}</h3>
-              <p style={{fontSize:13,color:palette.muted,margin:"0 0 8px",lineHeight:1.5}}>{hl.activities}</p>
-              <TransBadge type={hl.transport}/>
-              {hl.transportDetail&&<span style={{fontSize:11,color:palette.muted,marginLeft:8}}>{hl.transportDetail}</span>}
-            </div>
-            <div style={{width:42,height:42,borderRadius:"50%",background:cityColor(hl.city)+"22",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-              <MapPin size={17} color={cityColor(hl.city)}/>
-            </div>
+      {/* BOARDING PASS HERO */}
+      <div style={{background:`linear-gradient(135deg,${palette.primary} 0%,${palette.accent} 100%)`,borderRadius:20,padding:"22px 22px 0",marginBottom:16,overflow:"hidden",position:"relative",boxShadow:`0 8px 32px ${palette.primary}44`}}>
+        {/* Decorative circles */}
+        <div style={{position:"absolute",right:-40,top:-40,width:150,height:150,borderRadius:"50%",background:"rgba(255,255,255,0.1)"}}/>
+        <div style={{position:"absolute",left:-20,bottom:-20,width:100,height:100,borderRadius:"50%",background:"rgba(255,255,255,0.07)"}}/>
+        {/* From → To */}
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:14,position:"relative"}}>
+          <div style={{flex:1}}>
+            <p style={{fontSize:10,opacity:0.75,margin:"0 0 2px",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"#fff"}}>Departs</p>
+            <p style={{fontSize:22,fontWeight:800,color:"#fff",margin:0,fontFamily:"'Playfair Display',serif"}}>{cities[0]||"—"}</p>
           </div>
-          {activeHotel&&<div style={{marginTop:10,paddingTop:10,borderTop:`1px solid ${palette.border}`,display:"flex",alignItems:"center",gap:8}}><Hotel size={13} color={palette.muted}/><span style={{fontSize:12,color:palette.muted}}>{activeHotel.name}</span></div>}
+          <div style={{display:"flex",flexDirection:"column",alignItems:"center",gap:4}}>
+            <Plane size={18} color="rgba(255,255,255,0.8)" style={{transform:"rotate(90deg)"}}/>
+            <div style={{height:1,width:40,background:"rgba(255,255,255,0.4)"}}/>
+          </div>
+          <div style={{flex:1,textAlign:"right"}}>
+            <p style={{fontSize:10,opacity:0.75,margin:"0 0 2px",fontWeight:700,textTransform:"uppercase",letterSpacing:"0.06em",color:"#fff"}}>Arrives</p>
+            <p style={{fontSize:22,fontWeight:800,color:"#fff",margin:0,fontFamily:"'Playfair Display',serif"}}>{cities[cities.length-1]||"—"}</p>
+          </div>
+        </div>
+        {/* Dates row */}
+        <div style={{display:"flex",gap:20,marginBottom:14,position:"relative"}}>
+          <div><p style={{fontSize:10,opacity:0.7,margin:"0 0 1px",color:"#fff",fontWeight:600}}>DATE</p><p style={{fontSize:13,fontWeight:700,color:"#fff",margin:0}}>{fmtDateShort(trip.startDate)}</p></div>
+          <div><p style={{fontSize:10,opacity:0.7,margin:"0 0 1px",color:"#fff",fontWeight:600}}>DURATION</p><p style={{fontSize:13,fontWeight:700,color:"#fff",margin:0}}>{totalDays} days</p></div>
+          <div><p style={{fontSize:10,opacity:0.7,margin:"0 0 1px",color:"#fff",fontWeight:600}}>CITIES</p><p style={{fontSize:13,fontWeight:700,color:"#fff",margin:0}}>{cities.length}</p></div>
+        </div>
+        {/* Tear line */}
+        <div style={{margin:"0 -22px",height:0,borderTop:"2px dashed rgba(255,255,255,0.25)",position:"relative"}}>
+          <div style={{position:"absolute",left:-10,top:-9,width:18,height:18,borderRadius:"50%",background:palette.bg}}/>
+          <div style={{position:"absolute",right:-10,top:-9,width:18,height:18,borderRadius:"50%",background:palette.bg}}/>
+        </div>
+        {/* Bottom stub */}
+        <div style={{padding:"12px 0 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+          {du>0&&<><div><p style={{fontSize:10,opacity:0.7,color:"#fff",fontWeight:700,margin:"0 0 1px",textTransform:"uppercase",letterSpacing:"0.06em"}}>Boarding in</p><p style={{fontSize:24,fontWeight:800,color:"#fff",margin:0,lineHeight:1}}>{du} <span style={{fontSize:14}}>days</span></p></div></>}
+          {du===0&&<p style={{fontSize:16,fontWeight:800,color:"#fff",margin:0}}>🎉 Today's the day!</p>}
+          {du<0&&<div><p style={{fontSize:10,opacity:0.7,color:"#fff",fontWeight:700,margin:"0 0 1px",textTransform:"uppercase",letterSpacing:"0.06em"}}>In progress</p><p style={{fontSize:20,fontWeight:800,color:"#fff",margin:0}}>Day {Math.abs(du)+1}/{totalDays}</p></div>}
+          <div style={{display:"flex",gap:6}}>
+            {cities.slice(0,3).map(c=><CityStamp key={c} city={c} small/>)}
+            {cities.length>3&&<div style={{width:44,height:44,borderRadius:"50%",border:"2px dashed rgba(255,255,255,0.4)",display:"flex",alignItems:"center",justifyContent:"center"}}><span style={{fontSize:10,color:"rgba(255,255,255,0.8)",fontWeight:700}}>+{cities.length-3}</span></div>}
+          </div>
+        </div>
+      </div>
+
+      {/* Today/next — boarding pass stub style */}
+      {hl&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,overflow:"hidden",marginBottom:14,boxShadow:"0 2px 12px rgba(0,0,0,0.05)"}}>
+          <div style={{height:3,background:`linear-gradient(90deg,${palette.primary},${palette.accent})`}}/>
+          <div style={{padding:"14px 16px"}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
+              <div>
+                <p style={{fontSize:10,fontWeight:800,color:palette.primary,textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 4px"}}>{today?"Today — Day "+hl.dayNum:"Up next — Day "+hl.dayNum}</p>
+                <h3 style={{fontSize:17,fontWeight:700,color:palette.text,margin:"0 0 4px",fontFamily:"'Playfair Display',serif"}}>{hl.city}</h3>
+                <p style={{fontSize:12,color:palette.muted,margin:"0 0 8px",lineHeight:1.5}}>{hl.activities}</p>
+                <TransBadge type={hl.transport}/>
+                {hl.transportDetail&&<span style={{fontSize:11,color:palette.muted,marginLeft:8}}>{hl.transportDetail}</span>}
+              </div>
+              <CityStamp city={hl.city}/>
+            </div>
+            {activeHotel&&<div style={{marginTop:8,paddingTop:8,borderTop:`1px dashed ${palette.border}`,display:"flex",alignItems:"center",gap:8}}><Hotel size={13} color={palette.muted}/><span style={{fontSize:12,color:palette.muted}}>{activeHotel.name}</span></div>}
+          </div>
         </div>
       )}
 
-      {/* Stats */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
-        {[["📅","Days",totalDays],["🏙️","Cities",cities.length],["🍜","Restaurants",trip.restaurants.filter(r=>r.name).length],["📸","Memories",(trip.memories||[]).length]].map(([icon,label,val])=>(
-          <div key={label} style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"12px 14px"}}>
-            <div style={{fontSize:20,marginBottom:3}}>{icon}</div>
-            <div style={{fontSize:24,fontWeight:800,color:palette.text,lineHeight:1}}>{val}</div>
-            <div style={{fontSize:11,color:palette.muted,fontWeight:600,marginTop:2}}>{label}</div>
+      {/* Stats row */}
+      <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8,marginBottom:14}}>
+        {[["📅",totalDays,"Days"],["🏙️",cities.length,"Cities"],["🍜",trip.restaurants.filter(r=>r.name).length,"Eats"],["📸",(trip.memories||[]).length,"Memories"]].map(([icon,val,label])=>(
+          <div key={label} style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"10px 8px",textAlign:"center"}}>
+            <div style={{fontSize:18,marginBottom:2}}>{icon}</div>
+            <div style={{fontSize:20,fontWeight:800,color:palette.text,lineHeight:1}}>{val}</div>
+            <div style={{fontSize:10,color:palette.muted,fontWeight:600,marginTop:2}}>{label}</div>
           </div>
         ))}
       </div>
 
-      {/* Needs booking */}
+      {/* Needs booking alert */}
       {nb.length>0&&(
         <div style={{background:"#FFF3DC",borderRadius:14,padding:"12px 16px",marginBottom:14,border:"1px solid #FFDEA0",cursor:"pointer"}} onClick={()=>setView("transport")}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:4}}><AlertCircle size={15} color="#8A6200"/><span style={{fontSize:13,fontWeight:700,color:"#8A6200"}}>{nb.length} booking{nb.length>1?"s":""} needed</span></div>
@@ -309,52 +459,55 @@ function HomeView({ trip, palette, setView }) {
 
       {/* Latest memory */}
       {lastMemory&&(
-        <div style={{background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14,cursor:"pointer"}} onClick={()=>setView("memories")}>
+        <div style={{background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,padding:"14px 16px",cursor:"pointer"}} onClick={()=>setView("memories")}>
           <p style={{fontSize:11,fontWeight:800,color:palette.primary,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 8px"}}>Latest Memory</p>
           <h3 style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 3px"}}>{lastMemory.title}</h3>
           <p style={{fontSize:12,color:palette.muted,margin:"0 0 5px"}}>{lastMemory.city} · {fmtDate(lastMemory.date)}</p>
-          <div style={{display:"flex",gap:4,alignItems:"center"}}>
-            <span style={{fontSize:18}}>{lastMemory.mood}</span>
-            <span style={{fontSize:13}}>{"⭐".repeat(lastMemory.rating||0)}</span>
-          </div>
+          <StarRating value={lastMemory.rating||0} onChange={()=>{}} size={14}/>
         </div>
       )}
 
-      {/* City journey */}
-      <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>City Journey</p>
-      <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+      {/* City journey stamps */}
+      <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"16px 0 10px"}}>Journey</p>
+      <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
         {cities.map((c,i)=>(
-          <span key={c} style={{display:"inline-flex",alignItems:"center",gap:4,background:cityColor(c)+"18",border:`1.5px solid ${cityColor(c)}44`,color:cityColor(c),borderRadius:10,padding:"6px 12px",fontSize:12,fontWeight:700}}>
-            {i>0&&<span style={{fontSize:10,opacity:0.5}}>→</span>}{c}
-          </span>
+          <div key={c} style={{display:"flex",alignItems:"center",gap:8}}>
+            {i>0&&<span style={{fontSize:12,color:palette.muted,fontWeight:700}}>→</span>}
+            <div style={{display:"flex",alignItems:"center",gap:6,background:cityColor(c)+"14",border:`1.5px solid ${cityColor(c)}44`,borderRadius:10,padding:"5px 10px"}}>
+              <CityStamp city={c} small/>
+              <span style={{fontSize:12,fontWeight:700,color:cityColor(c)}}>{c}</span>
+            </div>
+          </div>
         ))}
       </div>
     </div>
   );
 }
 
-// ─── ITINERARY VIEW ───────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// ITINERARY VIEW — with photo/doc attachments
+// ══════════════════════════════════════════════════════════════
 function ItineraryView({ trip, palette, onUpdate }) {
   const [expId,setExpId]=useState(null);
   const [editId,setEditId]=useState(null);
   const [ef,setEf]=useState({});
   const [showAdd,setShowAdd]=useState(false);
   const [delId,setDelId]=useState(null);
-  const [nd,setNd]=useState({date:"",city:"",activities:"",transport:"train",transportDetail:"",bookingStatus:"pending",notes:""});
+  const [nd,setNd]=useState({date:"",city:"",activities:"",transport:"train",transportDetail:"",bookingStatus:"pending",notes:"",files:[]});
 
   const cycleStatus=(d)=>{const c=["confirmed","pending","needs booking"];onUpdate("itinerary",trip.itinerary.map(x=>x.id===d.id?{...x,bookingStatus:c[(c.indexOf(d.bookingStatus)+1)%c.length]}:x));};
   const saveEdit=()=>{onUpdate("itinerary",trip.itinerary.map(x=>x.id===editId?{...x,...ef}:x));setEditId(null);};
   const doDelete=(id)=>{onUpdate("itinerary",trip.itinerary.filter(x=>x.id!==id));setDelId(null);setExpId(null);};
   const addDay=()=>{
     const sorted=[...trip.itinerary,{...nd,id:uid(),dayNum:0}].sort((a,b)=>a.date.localeCompare(b.date)).map((d,i)=>({...d,dayNum:i+1}));
-    onUpdate("itinerary",sorted);setShowAdd(false);setNd({date:"",city:"",activities:"",transport:"train",transportDetail:"",bookingStatus:"pending",notes:""});
+    onUpdate("itinerary",sorted);setShowAdd(false);setNd({date:"",city:"",activities:"",transport:"train",transportDetail:"",bookingStatus:"pending",notes:"",files:[]});
   };
 
   return (
-    <div style={{padding:"24px 20px 40px"}}>
+    <div style={{padding:"20px 16px 40px"}}>
       {delId&&<Confirm message="Delete this day?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
       <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Itinerary</h2><p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.itinerary.length} days</p></div>
+        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Itinerary</h2><p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.itinerary.length} days planned</p></div>
         <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add Day</button>
       </div>
 
@@ -366,6 +519,7 @@ function ItineraryView({ trip, palette, onUpdate }) {
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="Transport" value={nd.transport} onChange={v=>setNd(p=>({...p,transport:v}))} opts={Object.entries(TRANSPORT_META).map(([v,m])=>({v,l:m.label}))}/><Inp label="Status" value={nd.bookingStatus} onChange={v=>setNd(p=>({...p,bookingStatus:v}))} opts={["confirmed","pending","needs booking"]}/></div>
           <Inp label="Transport detail" value={nd.transportDetail} placeholder="Route, flight number…" onChange={v=>setNd(p=>({...p,transportDetail:v}))}/>
           <Inp label="Notes" value={nd.notes} placeholder="Anything to remember?" onChange={v=>setNd(p=>({...p,notes:v}))} multi rows={2}/>
+          <MediaUpload files={nd.files||[]} onAdd={f=>setNd(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNd(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Attachments (booking confirmation, tickets…)" palette={palette}/>
           <div style={{display:"flex",gap:8}}>
             <button onClick={addDay} disabled={!nd.date||!nd.city} style={{flex:1,background:(nd.date&&nd.city)?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:(nd.date&&nd.city)?"pointer":"not-allowed"}}>Add Day</button>
             <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
@@ -375,6 +529,7 @@ function ItineraryView({ trip, palette, onUpdate }) {
 
       {trip.itinerary.map(d=>{
         const past=isPast(d.date),today=isToday(d.date),ss=BOOK_STATUS[d.bookingStatus]||BOOK_STATUS.pending,isExp=expId===d.id,isEd=editId===d.id;
+        const hasFiles=(d.files||[]).length>0;
         return (
           <div key={d.id} style={{background:"#fff",borderRadius:18,border:`1.5px solid ${today?palette.primary+"66":palette.border}`,marginBottom:10,opacity:past&&!today?0.6:1,boxShadow:today?`0 4px 20px ${palette.primary}22`:"none",overflow:"hidden"}}>
             {today&&<div style={{background:palette.primary,height:3}}/>}
@@ -387,6 +542,7 @@ function ItineraryView({ trip, palette, onUpdate }) {
                     <span style={{fontSize:11,color:palette.muted}}>{fmtDate(d.date)}</span>
                     <span style={{width:7,height:7,borderRadius:"50%",background:cityColor(d.city),flexShrink:0}}/>
                     <span style={{fontSize:12,fontWeight:700,color:cityColor(d.city)}}>{d.city}</span>
+                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700}}>📎 {d.files.length}</span>}
                   </div>
                   <p style={{fontSize:13,color:palette.text,margin:"0 0 8px",fontWeight:500,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:isExp?"normal":"nowrap"}}>{d.activities||"No activities listed"}</p>
                   <TransBadge type={d.transport}/>
@@ -405,6 +561,7 @@ function ItineraryView({ trip, palette, onUpdate }) {
                     <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="Transport" value={ef.transport||"other"} onChange={v=>setEf(p=>({...p,transport:v}))} opts={Object.entries(TRANSPORT_META).map(([v,m])=>({v,l:m.label}))}/><Inp label="Status" value={ef.bookingStatus||"pending"} onChange={v=>setEf(p=>({...p,bookingStatus:v}))} opts={["confirmed","pending","needs booking"]}/></div>
                     <Inp label="Transport detail" value={ef.transportDetail||""} onChange={v=>setEf(p=>({...p,transportDetail:v}))}/>
                     <Inp label="Notes" value={ef.notes||""} onChange={v=>setEf(p=>({...p,notes:v}))} multi rows={2}/>
+                    <MediaUpload files={ef.files||[]} onAdd={f=>setEf(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setEf(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} palette={palette}/>
                     <div style={{display:"flex",gap:8}}>
                       <button onClick={saveEdit} style={{flex:1,background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save</button>
                       <button onClick={()=>setEditId(null)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
@@ -414,8 +571,14 @@ function ItineraryView({ trip, palette, onUpdate }) {
                   <div style={{paddingTop:12}}>
                     {d.transportDetail&&<p style={{fontSize:12,color:palette.muted,margin:"0 0 10px"}}>{d.transportDetail}</p>}
                     {d.notes&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px",marginBottom:12}}><p style={{fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 3px"}}>NOTES</p><p style={{fontSize:12,color:palette.text,margin:0}}>{d.notes}</p></div>}
+                    {hasFiles&&(
+                      <div style={{marginBottom:12}}>
+                        <p style={{fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 8px"}}>ATTACHMENTS</p>
+                        <MediaUpload files={d.files} onAdd={f=>onUpdate("itinerary",trip.itinerary.map(x=>x.id===d.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("itinerary",trip.itinerary.map(x=>x.id===d.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/>
+                      </div>
+                    )}
                     <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>{setEditId(d.id);setEf({...d});}} style={{display:"flex",alignItems:"center",gap:6,background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Edit3 size={13}/>Edit</button>
+                      <button onClick={()=>{setEditId(d.id);setEf({...d,files:d.files||[]});}} style={{display:"flex",alignItems:"center",gap:6,background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Edit3 size={13}/>Edit</button>
                       <button onClick={()=>setDelId(d.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
                     </div>
                   </div>
@@ -430,14 +593,16 @@ function ItineraryView({ trip, palette, onUpdate }) {
   );
 }
 
-// ─── RESTAURANTS VIEW ─────────────────────────────────────────────────────────
+// ══════════════════════════════════════════════════════════════
+// TRANSPORT VIEW
+// ══════════════════════════════════════════════════════════════
 function TransportView({ trip, palette, onUpdate }) {
   const legs=trip.itinerary.filter(d=>d.transport!=="walk");
   const cyc=(d)=>{const c=["confirmed","pending","needs booking"];onUpdate("itinerary",trip.itinerary.map(x=>x.id===d.id?{...x,bookingStatus:c[(c.indexOf(d.bookingStatus)+1)%c.length]}:x));};
   const nb=legs.filter(l=>l.bookingStatus==="needs booking");
   return (
-    <div style={{padding:"24px 20px 40px"}}>
-      <h2 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Transport</h2>
+    <div style={{padding:"20px 16px 40px"}}>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Transport</h2>
       <p style={{color:palette.muted,fontSize:13,margin:"0 0 16px"}}>{legs.length} legs · {nb.length} need booking</p>
       {nb.length>0&&<div style={{background:"#FDE8E8",borderRadius:14,padding:"12px 16px",marginBottom:16,border:"1px solid #F5C0C0"}}><div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6}}><AlertCircle size={15} color="#9B2020"/><span style={{fontSize:13,fontWeight:700,color:"#9B2020"}}>{nb.length} unbooked</span></div>{nb.map(l=><p key={l.id} style={{fontSize:12,color:"#9B2020",margin:"3px 0 0"}}>Day {l.dayNum} — {l.city}: {l.transportDetail||TRANSPORT_META[l.transport]?.label}</p>)}</div>}
       <div style={{position:"relative"}}>
@@ -459,10 +624,12 @@ function TransportView({ trip, palette, onUpdate }) {
   );
 }
 
-// ─── ROUTE PLANNER — state persisted in trip.route so it survives tab switches ─
+// ══════════════════════════════════════════════════════════════
+// ROUTE PLANNER — fixed mobile layout (stacked, not side-by-side)
+// ══════════════════════════════════════════════════════════════
 function RoutePlannerView({ trip, palette, onUpdate }) {
   const allCities=[...new Set([...trip.itinerary.map(d=>d.city),...trip.restaurants.map(r=>r.city),...trip.hotels.map(h=>h.city)].filter(Boolean))];
-  const rs = trip.route || {stops:[],travelMode:"walking"};
+  const rs=trip.route||{stops:[],travelMode:"walking"};
   const [selCity,setSelCity]=useState(allCities[0]||"");
   const [custom,setCustom]=useState("");
   const [copied,setCopied]=useState(false);
@@ -470,7 +637,7 @@ function RoutePlannerView({ trip, palette, onUpdate }) {
   const setStops=(stops)=>onUpdate("route",{...rs,stops});
   const setMode=(travelMode)=>onUpdate("route",{...rs,travelMode});
 
-  const MODES=[{id:"walking",label:"Walk",e:"🚶"},{id:"transit",label:"Transit",e:"🚇"},{id:"driving",label:"Drive",e:"🚗"},{id:"bicycling",label:"Bike",e:"🚲"}];
+  const MODES=[{id:"walking",e:"🚶",l:"Walk"},{id:"transit",e:"🚇",l:"Transit"},{id:"driving",e:"🚗",l:"Drive"},{id:"bicycling",e:"🚲",l:"Bike"}];
   const TC={restaurant:{bg:"#EEE8F8",text:"#5B4C8A"},hotel:{bg:"#DFF0E1",text:"#3A6B42"},activity:{bg:"#E3EDF5",text:"#2A567A"},custom:{bg:"#FFF3DC",text:"#8A6200"}};
 
   const suggestions=[
@@ -483,94 +650,81 @@ function RoutePlannerView({ trip, palette, onUpdate }) {
   const addCustom=()=>{const t=custom.trim();if(!t)return;addStop({id:"c-"+Date.now(),label:t,address:t+", "+selCity,type:"custom",e:"📍"});setCustom("");};
   const removeStop=(id)=>setStops(rs.stops.filter(s=>s.id!==id));
   const moveStop=(i,dir)=>{const a=[...rs.stops],t=i+dir;if(t<0||t>=a.length)return;[a[i],a[t]]=[a[t],a[i]];setStops(a);};
-
   const mapsUrl=rs.stops.length>=2?`https://www.google.com/maps/dir/${rs.stops.map(s=>encodeURIComponent(s.address)).join("/")}?travelmode=${rs.travelMode}`:null;
   const copyUrl=()=>{if(!mapsUrl)return;navigator.clipboard.writeText(mapsUrl).catch(()=>{});setCopied(true);setTimeout(()=>setCopied(false),2000);};
 
   return (
-    <div style={{padding:"24px 20px 40px"}}>
-      <h2 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Route Planner</h2>
-      <p style={{color:palette.muted,fontSize:13,margin:"0 0 20px"}}>Build your stops · opens efficient route in Google Maps</p>
+    <div style={{padding:"20px 16px 40px"}}>
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Route Planner</h2>
+      <p style={{color:palette.muted,fontSize:13,margin:"0 0 16px"}}>Build your stops · opens efficient route in Google Maps</p>
 
-      <div style={{marginBottom:14}}>
-        <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 8px"}}>City</p>
-        <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:4}}>
-          {allCities.map(c=><button key={c} onClick={()=>setSelCity(c)} style={{flexShrink:0,padding:"7px 16px",borderRadius:99,border:"none",fontSize:13,fontWeight:700,cursor:"pointer",background:selCity===c?palette.primary:palette.primaryLight,color:selCity===c?"#fff":palette.primary}}>{c}</button>)}
-        </div>
+      {/* City + Mode — compact */}
+      <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:8,marginBottom:12}}>
+        {allCities.map(c=><button key={c} onClick={()=>setSelCity(c)} style={{flexShrink:0,padding:"7px 14px",borderRadius:99,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:selCity===c?palette.primary:palette.primaryLight,color:selCity===c?"#fff":palette.primary}}>{c}</button>)}
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:16}}>
+        {MODES.map(m=><button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"8px 4px",borderRadius:12,border:`2px solid ${rs.travelMode===m.id?palette.primary:"transparent"}`,background:rs.travelMode===m.id?palette.primaryLight:"#fff",color:rs.travelMode===m.id?palette.primary:palette.muted,fontSize:10,fontWeight:700,cursor:"pointer",textAlign:"center"}}><div style={{fontSize:16,marginBottom:2}}>{m.e}</div>{m.l}</button>)}
       </div>
 
-      <div style={{marginBottom:18}}>
-        <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 8px"}}>Travel Mode</p>
-        <div style={{display:"flex",gap:8}}>
-          {MODES.map(m=><button key={m.id} onClick={()=>setMode(m.id)} style={{flex:1,padding:"9px 4px",borderRadius:12,border:`2px solid ${rs.travelMode===m.id?palette.primary:"transparent"}`,background:rs.travelMode===m.id?palette.primaryLight:"#fff",color:rs.travelMode===m.id?palette.primary:palette.muted,fontSize:11,fontWeight:700,cursor:"pointer",textAlign:"center"}}><div style={{fontSize:18,marginBottom:2}}>{m.e}</div>{m.label}</button>)}
-        </div>
-      </div>
-
-      <div style={{display:"grid",gridTemplateColumns:"minmax(0,1fr) minmax(0,1fr)",gap:16,alignItems:"start"}}>
-        {/* Left: add stops */}
-        <div>
-          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Add Stops</p>
-          <div style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"12px 14px",marginBottom:12}}>
-            <p style={{fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 8px"}}>Type any place</p>
-            <div style={{display:"flex",gap:8}}>
-              <input value={custom} onChange={e=>setCustom(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCustom();}} placeholder={`e.g. Senso-ji Temple`} style={{flex:1,border:`1px solid ${palette.border}`,borderRadius:10,padding:"9px 11px",fontSize:13,fontFamily:"inherit",outline:"none",color:palette.text,background:"#FAF8F9"}}/>
-              <button onClick={addCustom} disabled={!custom.trim()} style={{background:custom.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"9px 14px",fontSize:13,fontWeight:700,cursor:custom.trim()?"pointer":"not-allowed",flexShrink:0}}><Plus size={14}/></button>
-            </div>
+      {/* YOUR ROUTE — full width on mobile */}
+      {rs.stops.length>0&&(
+        <div style={{background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,marginBottom:14,overflow:"hidden"}}>
+          <div style={{padding:"12px 14px 8px",borderBottom:`1px solid ${palette.border}`}}>
+            <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:0}}>Your Route ({rs.stops.length} stops)</p>
           </div>
-          {suggestions.length>0&&(
-            <div style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"12px 14px"}}>
-              <p style={{fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 10px"}}>From your trip</p>
-              <div style={{maxHeight:260,overflowY:"auto"}}>
-                {suggestions.map(s=>{const already=rs.stops.find(st=>st.id===s.id),tc=TC[s.type]||TC.custom;return(
-                  <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${palette.border}`}}>
-                    <div style={{flex:1,minWidth:0,marginRight:8}}>
-                      <div style={{display:"flex",alignItems:"center",gap:5,marginBottom:2}}><span style={{fontSize:13}}>{s.e}</span><span style={{fontSize:12,fontWeight:700,color:palette.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</span></div>
-                      <span style={{fontSize:10,background:tc.bg,color:tc.text,padding:"1px 7px",borderRadius:99,fontWeight:700}}>{s.type}</span>
-                    </div>
-                    <button onClick={()=>addStop(s)} disabled={!!already} style={{flexShrink:0,background:already?"#F1EFEF":palette.primaryLight,color:already?palette.muted:palette.primary,border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:already?"not-allowed":"pointer"}}>{already?"✓":"+ Add"}</button>
-                  </div>
-                );})}
+          {rs.stops.map((s,i)=>{const tc=TC[s.type]||TC.custom,isLast=i===rs.stops.length-1;return(
+            <div key={s.id} style={{padding:"10px 14px",borderBottom:isLast?"none":`1px solid ${palette.border}`,display:"flex",alignItems:"center",gap:10}}>
+              <div style={{width:26,height:26,borderRadius:"50%",background:i===0?`linear-gradient(135deg,${palette.primary},${palette.accent})`:isLast?"#2D2426":palette.primaryLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:11,fontWeight:800,color:i===0||isLast?"#fff":palette.primary,flexShrink:0}}>{String.fromCharCode(65+i)}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{fontSize:13,fontWeight:700,color:palette.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</div>
+                <span style={{fontSize:10,background:tc.bg,color:tc.text,padding:"1px 7px",borderRadius:99,fontWeight:700}}>{s.type}</span>
+              </div>
+              <div style={{display:"flex",gap:4,flexShrink:0}}>
+                <button onClick={()=>moveStop(i,-1)} disabled={i===0} style={{background:i===0?"#F5F0F2":palette.primaryLight,color:i===0?palette.muted:palette.primary,border:"none",borderRadius:6,width:24,height:24,cursor:i===0?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>↑</button>
+                <button onClick={()=>moveStop(i,1)} disabled={isLast} style={{background:isLast?"#F5F0F2":palette.primaryLight,color:isLast?palette.muted:palette.primary,border:"none",borderRadius:6,width:24,height:24,cursor:isLast?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center",fontSize:12}}>↓</button>
+                <button onClick={()=>removeStop(s.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:6,width:24,height:24,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><X size={11}/></button>
               </div>
             </div>
-          )}
+          );})}
         </div>
+      )}
 
-        {/* Right: route */}
-        <div>
-          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Your Route ({rs.stops.length})</p>
-          {rs.stops.length===0&&<div style={{background:"#fff",borderRadius:14,border:`1.5px dashed ${palette.border}`,padding:"32px 16px",textAlign:"center",color:palette.muted}}><div style={{fontSize:32,marginBottom:8}}>📍</div><p style={{fontSize:13}}>Add 2+ stops to build a route</p></div>}
-          {rs.stops.length>0&&(
-            <div style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,overflow:"hidden",marginBottom:12}}>
-              {rs.stops.map((s,i)=>{const tc=TC[s.type]||TC.custom,isLast=i===rs.stops.length-1;return(
-                <div key={s.id} style={{padding:"11px 14px",borderBottom:isLast?"none":`1px solid ${palette.border}`,display:"flex",alignItems:"center",gap:10}}>
-                  <div style={{width:28,height:28,borderRadius:"50%",background:i===0?`linear-gradient(135deg,${palette.primary},${palette.accent})`:isLast?"#2D2426":palette.primaryLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:12,fontWeight:800,color:i===0||isLast?"#fff":palette.primary,flexShrink:0}}>{String.fromCharCode(65+i)}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:13,fontWeight:700,color:palette.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</div>
-                    <span style={{fontSize:10,background:tc.bg,color:tc.text,padding:"1px 7px",borderRadius:99,fontWeight:700}}>{s.type}</span>
-                  </div>
-                  <div style={{display:"flex",gap:4,flexShrink:0}}>
-                    <button onClick={()=>moveStop(i,-1)} disabled={i===0} style={{background:i===0?"#F5F0F2":palette.primaryLight,color:i===0?palette.muted:palette.primary,border:"none",borderRadius:6,width:26,height:26,cursor:i===0?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>↑</button>
-                    <button onClick={()=>moveStop(i,1)} disabled={isLast} style={{background:isLast?"#F5F0F2":palette.primaryLight,color:isLast?palette.muted:palette.primary,border:"none",borderRadius:6,width:26,height:26,cursor:isLast?"not-allowed":"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>↓</button>
-                    <button onClick={()=>removeStop(s.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:6,width:26,height:26,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><X size={12}/></button>
-                  </div>
-                </div>
-              );})}
-            </div>
-          )}
-          {rs.stops.length>=2&&(
-            <div style={{display:"flex",flexDirection:"column",gap:8}}>
-              <a href={mapsUrl} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:`linear-gradient(135deg,${palette.primary},${palette.accent})`,color:"#fff",borderRadius:14,padding:"14px 0",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:`0 4px 16px ${palette.primary}44`}}><MapPin size={16}/>Open in Google Maps</a>
-              <button onClick={copyUrl} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:copied?"#DFF0E1":palette.primaryLight,color:copied?"#3A6B42":palette.primary,border:"none",borderRadius:14,padding:"12px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>{copied?<Check size={15}/>:<Copy size={15}/>}{copied?"Copied!":"Copy link"}</button>
-              <div style={{background:"#FFF3DC",borderRadius:12,padding:"10px 14px",border:"1px solid #FFDEA0"}}><p style={{fontSize:11,color:"#8A6200",margin:0,lineHeight:1.5}}>💡 Inside Google Maps tap <strong>"Optimise route"</strong> for the most efficient order.</p></div>
-            </div>
-          )}
+      {/* Open / copy buttons */}
+      {rs.stops.length>=2&&(
+        <div style={{display:"flex",flexDirection:"column",gap:8,marginBottom:16}}>
+          <a href={mapsUrl} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:`linear-gradient(135deg,${palette.primary},${palette.accent})`,color:"#fff",borderRadius:14,padding:"14px 0",fontSize:14,fontWeight:700,textDecoration:"none",boxShadow:`0 4px 16px ${palette.primary}44`}}><MapPin size={16}/>Open in Google Maps</a>
+          <button onClick={copyUrl} style={{display:"flex",alignItems:"center",justifyContent:"center",gap:8,background:copied?"#DFF0E1":palette.primaryLight,color:copied?"#3A6B42":palette.primary,border:"none",borderRadius:14,padding:"12px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>{copied?<Check size={15}/>:<Copy size={15}/>}{copied?"Copied!":"Copy link"}</button>
+          <div style={{background:"#FFF3DC",borderRadius:12,padding:"10px 14px",border:"1px solid #FFDEA0"}}><p style={{fontSize:11,color:"#8A6200",margin:0,lineHeight:1.5}}>💡 Inside Google Maps tap <strong>Optimise route</strong> for shortest path.</p></div>
+        </div>
+      )}
+
+      {/* Add stops — full width */}
+      <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Add Stops</p>
+      <div style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"12px 14px",marginBottom:12}}>
+        <div style={{display:"flex",gap:8}}>
+          <input value={custom} onChange={e=>setCustom(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCustom();}} placeholder="Type any place name or address…"
+            style={{flex:1,border:`1px solid ${palette.border}`,borderRadius:10,padding:"9px 11px",fontSize:13,fontFamily:"inherit",outline:"none",color:palette.text,background:"#FAF8F9"}}/>
+          <button onClick={addCustom} disabled={!custom.trim()} style={{background:custom.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"9px 14px",fontSize:13,fontWeight:700,cursor:custom.trim()?"pointer":"not-allowed",flexShrink:0}}><Plus size={14}/></button>
         </div>
       </div>
+      {suggestions.length>0&&(
+        <div style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,overflow:"hidden"}}>
+          <div style={{padding:"10px 14px",borderBottom:`1px solid ${palette.border}`}}><p style={{fontSize:12,fontWeight:700,color:palette.text,margin:0}}>From your trip in {selCity}</p></div>
+          {suggestions.map(s=>{const already=rs.stops.find(st=>st.id===s.id),tc=TC[s.type]||TC.custom;return(
+            <div key={s.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"10px 14px",borderBottom:`1px solid ${palette.border}`}}>
+              <div style={{flex:1,minWidth:0,marginRight:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:2}}><span style={{fontSize:14}}>{s.e}</span><span style={{fontSize:13,fontWeight:600,color:palette.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.label}</span></div>
+                <span style={{fontSize:10,background:tc.bg,color:tc.text,padding:"1px 7px",borderRadius:99,fontWeight:700}}>{s.type}</span>
+              </div>
+              <button onClick={()=>addStop(s)} disabled={!!already} style={{flexShrink:0,background:already?"#F1EFEF":palette.primaryLight,color:already?palette.muted:palette.primary,border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:already?"not-allowed":"pointer"}}>{already?"✓":"+ Add"}</button>
+            </div>
+          );})}
+        </div>
+      )}
+      {rs.stops.length===0&&<div style={{textAlign:"center",padding:"20px 0",color:palette.muted}}><div style={{fontSize:32,marginBottom:8}}>📍</div><p style={{fontSize:13}}>Add at least 2 stops above to generate a route</p></div>}
     </div>
   );
 }
-
-// ─── MEMORIES VIEW ────────────────────────────────────────────────────────────
 function MemoriesView({ trip, palette, onUpdate }) {
   const memories = trip.memories || [];
   const [showAdd, setShowAdd] = useState(false);
@@ -824,117 +978,6 @@ function MemoriesView({ trip, palette, onUpdate }) {
     </div>
   );
 }
-
-// ─── SETTINGS VIEW ────────────────────────────────────────────────────────────
-
-// ══════════════════════════════════════════════════════════════
-// CUISINE AUTOCOMPLETE
-// ══════════════════════════════════════════════════════════════
-const CUISINE_LIST = [
-  "American","Bakery","BBQ","Brunch","Burger","Café","Chinese","Cocktail Bar",
-  "Dim Sum","Ethiopian","Filipino","Fine Dining","French","Fusion","Greek",
-  "Hot Pot","Indian","Indonesian","Izakaya","Italian","Japanese","Kaiseki",
-  "Korean","Latin","Malaysian","Mediterranean","Mexican","Middle Eastern",
-  "Noodles","Okonomiyaki","Omakase","Pasta","Persian","Pizza","Ramen",
-  "Seafood","Shabu-shabu","Soba","Spanish","Sri Lankan","Steak","Street Food",
-  "Sushi","Tapas","Thai","Turkish","Udon","Vegan","Vietnamese","Wine Bar","Yakitori"
-];
-
-function CuisineInput({ value, onChange, palette }) {
-  const [open, setOpen] = useState(false);
-  const [q, setQ] = useState(value || "");
-  const ref = useRef();
-  useEffect(() => { setQ(value || ""); }, [value]);
-  const filtered = q.length > 0
-    ? CUISINE_LIST.filter(c => c.toLowerCase().includes(q.toLowerCase())).slice(0, 7)
-    : CUISINE_LIST.slice(0, 7);
-  const pick = (v) => { setQ(v); onChange(v); setOpen(false); };
-  useEffect(() => {
-    const fn = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
-    document.addEventListener("mousedown", fn);
-    return () => document.removeEventListener("mousedown", fn);
-  }, []);
-  return (
-    <div ref={ref} style={{ position:"relative", marginBottom:12 }}>
-      <label style={{ fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:5,textTransform:"uppercase",letterSpacing:"0.05em" }}>Cuisine</label>
-      <input value={q}
-        onChange={e => { setQ(e.target.value); onChange(e.target.value); setOpen(true); }}
-        onFocus={() => setOpen(true)}
-        placeholder="Type or pick — e.g. Ramen, Kaiseki…"
-        style={{ width:"100%",border:"1px solid #EDE5E7",borderRadius:10,padding:"9px 11px",fontSize:13,fontFamily:"inherit",outline:"none",boxSizing:"border-box",color:"#2D2426",background:"#FAF8F9" }}
-      />
-      {open && filtered.length > 0 && (
-        <div style={{ position:"absolute",top:"calc(100% + 2px)",left:0,right:0,background:"#fff",border:"1px solid #EDE5E7",borderRadius:10,boxShadow:"0 8px 28px rgba(0,0,0,0.13)",zIndex:600,overflow:"hidden" }}>
-          {filtered.map(c => (
-            <div key={c} onMouseDown={() => pick(c)}
-              style={{ padding:"10px 14px",fontSize:13,cursor:"pointer",color:"#2D2426",borderBottom:"1px solid #F8F4F5" }}
-              onMouseEnter={e => e.currentTarget.style.background="#FAF7F8"}
-              onMouseLeave={e => e.currentTarget.style.background="#fff"}>
-              {c}
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-// BOOKING CONFIRMATION UPLOAD
-// ══════════════════════════════════════════════════════════════
-function BookingUpload({ files, onAdd, onRemove, palette }) {
-  const ref = useRef();
-  const read = (file) => new Promise(res => {
-    const r = new FileReader();
-    r.onload = e => res({ name:file.name, type:file.type, data:e.target.result });
-    r.readAsDataURL(file);
-  });
-  const handle = async (fl) => {
-    const results = await Promise.all(Array.from(fl).map(read));
-    results.forEach(f => onAdd(f));
-  };
-  const download = (f) => {
-    const a = document.createElement("a"); a.href = f.data; a.download = f.name; a.click();
-  };
-  const isPDF = (f) => f.type === "application/pdf" || f.name?.endsWith(".pdf");
-  return (
-    <div style={{ marginBottom:12 }}>
-      <label style={{ fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em" }}>Booking Confirmation</label>
-      {(files||[]).length > 0 && (
-        <div style={{ marginBottom:8, display:"flex", flexDirection:"column", gap:6 }}>
-          {files.map((f,i) => (
-            <div key={i} style={{ display:"flex",alignItems:"center",gap:8,background:"#FAF8F9",borderRadius:10,padding:"8px 12px",border:"1px solid #EDE5E7" }}>
-              <span style={{ fontSize:18 }}>{isPDF(f)?"📄":"🖼️"}</span>
-              <span style={{ flex:1,fontSize:12,fontWeight:600,color:"#2D2426",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{f.name}</span>
-              <button onClick={() => download(f)} style={{ background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer" }}>View</button>
-              <button onClick={() => onRemove(i)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"4px 8px",fontSize:11,cursor:"pointer" }}>✕</button>
-            </div>
-          ))}
-        </div>
-      )}
-      <button onClick={() => ref.current.click()}
-        style={{ display:"flex",alignItems:"center",gap:6,background:"#F5F0F2",color:"#9A8F92",border:"1px dashed #D0C8CA",borderRadius:10,padding:"9px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
-        <Upload size={13}/>Upload PDF or Image
-      </button>
-      <input ref={ref} type="file" accept="image/*,.pdf" multiple style={{ display:"none" }} onChange={e => handle(e.target.files)}/>
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-// FINANCES VIEW
-// ══════════════════════════════════════════════════════════════
-const EXPENSE_CATS = [
-  { id:"accommodation", label:"Accommodation", emoji:"🏨" },
-  { id:"transport",     label:"Transport",     emoji:"🚄" },
-  { id:"food",          label:"Food & Drink",  emoji:"🍜" },
-  { id:"activity",      label:"Activities",    emoji:"🎭" },
-  { id:"shopping",      label:"Shopping",      emoji:"🛍️" },
-  { id:"health",        label:"Health",        emoji:"💊" },
-  { id:"other",         label:"Other",         emoji:"📦" },
-];
-const CURRENCIES = ["USD","IDR","JPY","EUR","GBP","AUD","SGD","MYR","THB","KRW","CNY","HKD","TWD","PHP","VND","CHF","CAD","NZD"];
-
 function FinancesView({ trip, palette, onUpdate }) {
   const expenses = trip.expenses || [];
   const budget   = trip.budget   || { amount:"", currency:"USD" };
@@ -1173,113 +1216,540 @@ function FinancesView({ trip, palette, onUpdate }) {
 }
 
 // ══════════════════════════════════════════════════════════════
-// TRIP SELECTOR — with delete trip
+// RESTAURANTS VIEW — with photo upload + rating
+// ══════════════════════════════════════════════════════════════
+function RestaurantsView({ trip, palette, onUpdate }) {
+  const allCities=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];
+  const [city,setCity]=useState(allCities[0]||"");
+  const [search,setSearch]=useState("");
+  const [fSt,setFSt]=useState("all");
+  const [showAdd,setShowAdd]=useState(false);
+  const [showAddCity,setShowAddCity]=useState(false);
+  const [delId,setDelId]=useState(null);
+  const [expId,setExpId]=useState(null);
+  const [editId,setEditId]=useState(null);
+  const [nr,setNr]=useState({city:allCities[0]||"",name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",rating:0,myReview:"",files:[]});
+  const [ef,setEf]=useState({});
+
+  const switchCity=(c)=>{setCity(c);setNr(p=>({...p,city:c}));};
+  useEffect(()=>{const u=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];if(u.length>0&&!u.includes(city))switchCity(u[u.length-1]);},[trip.restaurants]);
+
+  const SO=["wishlist","chosen","visited","skipped"];
+  const cycle=(r)=>{const i=SO.indexOf(r.status);onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,status:SO[(i+1)%SO.length]}:x));};
+  const doDelete=(id)=>{onUpdate("restaurants",trip.restaurants.filter(x=>x.id!==id));setDelId(null);setExpId(null);};
+  const saveEdit=()=>{onUpdate("restaurants",trip.restaurants.map(x=>x.id===editId?{...x,...ef}:x));setEditId(null);};
+  const addR=()=>{
+    if(!nr.name.trim())return;
+    onUpdate("restaurants",[...trip.restaurants,{...nr,id:uid()}]);
+    setShowAdd(false);
+    setNr({city,name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",rating:0,myReview:"",files:[]});
+  };
+  const addCity=(name)=>{onUpdate("restaurants",[...trip.restaurants,{id:uid(),city:name,name:"",cuisine:"",price:"",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",rating:0,myReview:"",files:[]}]);setShowAddCity(false);};
+
+  const filtered=trip.restaurants.filter(r=>r.city===city&&r.name&&(fSt==="all"||r.status===fSt)&&(search===""||r.name.toLowerCase().includes(search.toLowerCase())||(r.cuisine||"").toLowerCase().includes(search.toLowerCase())));
+
+  return (
+    <div style={{padding:"20px 16px 40px"}}>
+      {delId&&<Confirm message="Remove this restaurant?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+      {showAddCity&&<CityDialog onOk={addCity} onNo={()=>setShowAddCity(false)} palette={palette}/>}
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Eats</h2>
+        <p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.restaurants.filter(r=>r.name&&r.status==="wishlist").length} wishlist · {trip.restaurants.filter(r=>r.name&&r.status==="visited").length} visited</p></div>
+        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add</button>
+      </div>
+
+      {/* City tabs */}
+      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:10,marginBottom:8}}>
+        {allCities.map(c=><button key={c} onClick={()=>switchCity(c)} style={{flexShrink:0,padding:"7px 16px",borderRadius:99,border:"none",fontSize:13,fontWeight:700,cursor:"pointer",background:city===c?palette.primary:palette.primaryLight,color:city===c?"#fff":palette.primary}}>{c}</button>)}
+        <button onClick={()=>setShowAddCity(true)} style={{flexShrink:0,padding:"7px 14px",borderRadius:99,border:`1.5px dashed ${palette.primary}`,background:"transparent",color:palette.primary,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><Plus size={13}/>City</button>
+      </div>
+
+      {/* Add form */}
+      {showAdd&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
+          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Add Restaurant {city?"— "+city:""}</h3>
+          <Inp label="Name" value={nr.name} placeholder="Restaurant name" onChange={v=>setNr(p=>({...p,name:v}))}/>
+          <CuisineInput value={nr.cuisine} onChange={v=>setNr(p=>({...p,cuisine:v}))} palette={palette}/>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Inp label="Price" value={nr.price} onChange={v=>setNr(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/>
+            <Inp label="Reservation" value={nr.reservationRequired} onChange={v=>setNr(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/>
+          </div>
+          <Inp label="Must-try dish" value={nr.mustTry} placeholder="Signature item" onChange={v=>setNr(p=>({...p,mustTry:v}))}/>
+          <Inp label="Area / District" value={nr.area} placeholder="Neighborhood" onChange={v=>setNr(p=>({...p,area:v}))}/>
+          <Inp label="Notes" value={nr.notes} placeholder="Hours, tips…" onChange={v=>setNr(p=>({...p,notes:v}))} multi rows={2}/>
+          {/* Rating */}
+          <div style={{marginBottom:12}}>
+            <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
+            <StarRating value={nr.rating} onChange={v=>setNr(p=>({...p,rating:v}))}/>
+          </div>
+          <Inp label="My Review" value={nr.myReview} placeholder="What did you think?" onChange={v=>setNr(p=>({...p,myReview:v}))} multi rows={2}/>
+          <MediaUpload files={nr.files||[]} onAdd={f=>setNr(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNr(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Photos & Booking Confirmation" palette={palette}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addR} disabled={!nr.name.trim()} style={{flex:1,background:nr.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nr.name.trim()?"pointer":"not-allowed"}}>Add Restaurant</button>
+            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Search + filter */}
+      <div style={{marginBottom:12}}>
+        <div style={{display:"flex",alignItems:"center",background:"#fff",border:`1px solid ${palette.border}`,borderRadius:12,padding:"0 12px",marginBottom:8}}>
+          <Search size={14} color={palette.muted}/>
+          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{flex:1,border:"none",outline:"none",padding:"10px 8px",fontSize:13,fontFamily:"inherit",color:palette.text,background:"transparent"}}/>
+          {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><X size={14} color={palette.muted}/></button>}
+        </div>
+        <div style={{display:"flex",gap:6,overflowX:"auto"}}>
+          {["all","wishlist","chosen","visited","skipped"].map(s=><button key={s} onClick={()=>setFSt(s)} style={{flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:fSt===s?palette.primary:"#F5F0F2",color:fSt===s?"#fff":palette.muted}}>{s==="all"?"All":REST_STATUS[s]?.label}</button>)}
+        </div>
+      </div>
+
+      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:palette.muted}}><div style={{fontSize:32,marginBottom:8}}>🍽️</div><p>No restaurants found</p></div>}
+
+      {filtered.map(r=>{
+        const st=REST_STATUS[r.status]||REST_STATUS.wishlist;
+        const isExp=expId===r.id, isEd=editId===r.id;
+        const hasFiles=(r.files||[]).length>0;
+        return (
+          <div key={r.id} style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,marginBottom:10,overflow:"hidden"}}>
+            <div style={{padding:"14px 16px",cursor:"pointer"}} onClick={()=>!isEd&&setExpId(isExp?null:r.id)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{r.name}</h3>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
+                    {r.cuisine&&<span style={{fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"2px 8px",borderRadius:99,fontWeight:600}}>{r.cuisine}</span>}
+                    {r.price&&<span style={{fontSize:12,color:palette.primary,fontWeight:700}}>{r.price}</span>}
+                    {r.area&&<span style={{fontSize:11,color:palette.muted,display:"flex",alignItems:"center",gap:3}}><MapPin size={10}/>{r.area}</span>}
+                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700}}>📎 {r.files.length}</span>}
+                  </div>
+                  {r.rating>0&&<div style={{marginTop:5}}><StarRating value={r.rating} onChange={()=>{}} size={13}/></div>}
+                </div>
+                <div style={{display:"flex",gap:6,marginLeft:8,flexShrink:0,flexDirection:"column",alignItems:"flex-end"}}>
+                  <button onClick={e=>{e.stopPropagation();cycle(r);}} style={{background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>{st.label}</button>
+                  <ChevronDown size={13} color={palette.muted} style={{transform:isExp?"rotate(180deg)":"none",transition:"transform 0.2s"}}/>
+                </div>
+              </div>
+              {r.mustTry&&<p style={{fontSize:12,color:palette.text,margin:"4px 0 0"}}>⭐ {r.mustTry}</p>}
+              {r.reservationRequired&&r.reservationRequired!=="No"&&<span style={{fontSize:11,background:"#FFF3DC",color:"#8A6200",padding:"2px 8px",borderRadius:99,fontWeight:600,display:"inline-block",marginTop:4}}>Reservation: {r.reservationRequired}</span>}
+            </div>
+
+            {/* Expanded details */}
+            {isExp&&(
+              <div style={{padding:"0 16px 16px",borderTop:`1px solid ${palette.border}`}}>
+                {isEd?(
+                  <div style={{paddingTop:14}}>
+                    <Inp label="Name" value={ef.name||""} onChange={v=>setEf(p=>({...p,name:v}))}/>
+                    <CuisineInput value={ef.cuisine||""} onChange={v=>setEf(p=>({...p,cuisine:v}))} palette={palette}/>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      <Inp label="Price" value={ef.price||""} onChange={v=>setEf(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/>
+                      <Inp label="Reservation" value={ef.reservationRequired||"No"} onChange={v=>setEf(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/>
+                    </div>
+                    <Inp label="Must-try" value={ef.mustTry||""} onChange={v=>setEf(p=>({...p,mustTry:v}))}/>
+                    <Inp label="Area" value={ef.area||""} onChange={v=>setEf(p=>({...p,area:v}))}/>
+                    <Inp label="Notes" value={ef.notes||""} onChange={v=>setEf(p=>({...p,notes:v}))} multi rows={2}/>
+                    <div style={{marginBottom:12}}>
+                      <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
+                      <StarRating value={ef.rating||0} onChange={v=>setEf(p=>({...p,rating:v}))}/>
+                    </div>
+                    <Inp label="My Review" value={ef.myReview||""} onChange={v=>setEf(p=>({...p,myReview:v}))} multi rows={2}/>
+                    <MediaUpload files={ef.files||[]} onAdd={f=>setEf(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setEf(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Photos & Docs" palette={palette}/>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={saveEdit} style={{flex:1,background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save</button>
+                      <button onClick={()=>setEditId(null)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
+                    </div>
+                  </div>
+                ):(
+                  <div style={{paddingTop:12}}>
+                    {r.notes&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 3px"}}>NOTES</p><p style={{fontSize:12,color:palette.text,margin:0}}>{r.notes}</p></div>}
+                    {r.myReview&&<div style={{background:palette.primaryLight+"55",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.primary,margin:"0 0 3px"}}>MY REVIEW</p><p style={{fontSize:12,color:palette.text,margin:0}}>{r.myReview}</p></div>}
+                    {hasFiles&&<div style={{marginBottom:10}}><MediaUpload files={r.files||[]} onAdd={f=>onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/></div>}
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>{setEditId(r.id);setEf({...r,files:r.files||[]});}} style={{display:"flex",alignItems:"center",gap:6,background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Edit3 size={13}/>Edit</button>
+                      <button onClick={()=>setDelId(r.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// HOTELS VIEW — with photo/doc upload + rating
+// ══════════════════════════════════════════════════════════════
+function HotelsView({ trip, palette, onUpdate }) {
+  const [copied,setCopied]=useState(null);
+  const [showAdd,setShowAdd]=useState(false);
+  const [delId,setDelId]=useState(null);
+  const [expId,setExpId]=useState(null);
+  const [nh,setNh]=useState({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",rating:0,myReview:"",files:[]});
+
+  const copy=(id,txt)=>{navigator.clipboard.writeText(txt).catch(()=>{});setCopied(id);setTimeout(()=>setCopied(null),1500);};
+  const doDelete=(id)=>{onUpdate("hotels",trip.hotels.filter(x=>x.id!==id));setDelId(null);};
+  const addH=()=>{
+    if(!nh.name.trim())return;
+    onUpdate("hotels",[...trip.hotels,{...nh,id:uid()}]);
+    setShowAdd(false);
+    setNh({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",rating:0,myReview:"",files:[]});
+  };
+
+  return (
+    <div style={{padding:"20px 16px 40px"}}>
+      {delId&&<Confirm message="Remove this hotel?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Hotels</h2><p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.hotels.length} stays</p></div>
+        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add Hotel</button>
+      </div>
+
+      {showAdd&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
+          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>New Stay</h3>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Inp label="City" value={nh.city} placeholder="e.g. Tokyo" onChange={v=>setNh(p=>({...p,city:v}))}/>
+            <Inp label="Hotel Name" value={nh.name} placeholder="Hotel name" onChange={v=>setNh(p=>({...p,name:v}))}/>
+          </div>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            <Inp label="Check-in" type="date" value={nh.checkIn} onChange={v=>setNh(p=>({...p,checkIn:v}))}/>
+            <Inp label="Check-out" type="date" value={nh.checkOut} onChange={v=>setNh(p=>({...p,checkOut:v}))}/>
+          </div>
+          <Inp label="Confirmation #" value={nh.confirmation} placeholder="Booking reference" onChange={v=>setNh(p=>({...p,confirmation:v}))}/>
+          <Inp label="Address" value={nh.address} placeholder="Full address" onChange={v=>setNh(p=>({...p,address:v}))}/>
+          <Inp label="Phone" value={nh.phone} placeholder="+XX XXX XXXX" onChange={v=>setNh(p=>({...p,phone:v}))}/>
+          <Inp label="Notes" value={nh.notes} placeholder="Early check-in, preferences…" onChange={v=>setNh(p=>({...p,notes:v}))} multi rows={2}/>
+          <div style={{marginBottom:12}}>
+            <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
+            <StarRating value={nh.rating} onChange={v=>setNh(p=>({...p,rating:v}))}/>
+          </div>
+          <Inp label="My Review" value={nh.myReview} placeholder="Would you stay again?" onChange={v=>setNh(p=>({...p,myReview:v}))} multi rows={2}/>
+          <MediaUpload files={nh.files||[]} onAdd={f=>setNh(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNh(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Booking Confirmation & Photos" palette={palette}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addH} disabled={!nh.name.trim()} style={{flex:1,background:nh.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nh.name.trim()?"pointer":"not-allowed"}}>Add Hotel</button>
+            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {trip.hotels.map(h=>{
+        const nights=nightsBetween(h.checkIn,h.checkOut),du=daysUntil(h.checkIn);
+        const active=new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date();
+        const past=new Date(h.checkOut+"T00:00:00")<new Date();
+        const isExp=expId===h.id;
+        const hasFiles=(h.files||[]).length>0;
+        return(
+          <div key={h.id} style={{background:"#fff",borderRadius:20,border:`1.5px solid ${active?palette.primary+"44":palette.border}`,marginBottom:12,overflow:"hidden",opacity:past?0.7:1}}>
+            {active&&<div style={{background:`linear-gradient(90deg,${palette.primary},${palette.accent})`,height:4}}/>}
+            <div style={{padding:"16px 18px",cursor:"pointer"}} onClick={()=>setExpId(isExp?null:h.id)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}}>
+                    <span style={{background:cityColor(h.city)+"20",color:cityColor(h.city),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99}}>{h.city}</span>
+                    {active&&<span style={{background:palette.primaryLight,color:palette.primary,fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:99}}>STAYING HERE</span>}
+                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"2px 8px",borderRadius:99,fontWeight:700}}>📄 Docs</span>}
+                  </div>
+                  <h3 style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{h.name}</h3>
+                  {h.rating>0&&<StarRating value={h.rating} onChange={()=>{}} size={13}/>}
+                </div>
+                <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
+                  <div><div style={{fontSize:20,fontWeight:800,color:palette.primary}}>{nights}</div><div style={{fontSize:11,color:palette.muted,fontWeight:600}}>night{nights!==1?"s":""}</div></div>
+                  <ChevronDown size={13} color={palette.muted} style={{transform:isExp?"rotate(180deg)":"none",transition:"0.2s"}}/>
+                </div>
+              </div>
+              <div style={{background:"#FAF8F9",borderRadius:12,padding:"10px 12px",display:"flex",justifyContent:"space-between"}}>
+                <div><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>CHECK IN</p><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtDate(h.checkIn)}</p></div>
+                <div style={{width:1,background:palette.border}}/>
+                <div style={{textAlign:"right"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>CHECK OUT</p><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtDate(h.checkOut)}</p></div>
+              </div>
+              {!past&&du>0&&<p style={{fontSize:11,color:palette.muted,margin:"8px 0 0",textAlign:"center"}}>Check-in in {du} day{du!==1?"s":""}</p>}
+            </div>
+
+            {isExp&&(
+              <div style={{padding:"0 18px 16px",borderTop:`1px solid ${palette.border}`}}>
+                <div style={{paddingTop:12,display:"flex",gap:8,marginBottom:12}}>
+                  {h.confirmation&&<button onClick={()=>copy(h.id,h.confirmation)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:copied===h.id?"#DFF0E1":palette.primaryLight,color:copied===h.id?"#3A6B42":palette.primary,border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>{copied===h.id?<Check size={13}/>:<Copy size={13}/>}{copied===h.id?"Copied!":h.confirmation}</button>}
+                  {h.address&&<a href={`https://maps.google.com/?q=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,borderRadius:10,padding:"10px 14px",fontSize:12,fontWeight:700,textDecoration:"none"}}><MapPin size={13}/>Map</a>}
+                </div>
+                {h.myReview&&<div style={{background:palette.primaryLight+"55",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.primary,margin:"0 0 3px"}}>MY REVIEW</p><p style={{fontSize:12,color:palette.text,margin:0}}>{h.myReview}</p></div>}
+                {h.notes&&<p style={{fontSize:12,color:palette.muted,margin:"0 0 10px",lineHeight:1.4}}>{h.notes}</p>}
+                {hasFiles&&<MediaUpload files={h.files||[]} onAdd={f=>onUpdate("hotels",trip.hotels.map(x=>x.id===h.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("hotels",trip.hotels.map(x=>x.id===h.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/>}
+                <div style={{display:"flex",gap:8,marginTop:8}}>
+                  <button onClick={()=>doDelete(h.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {trip.hotels.length===0&&<div style={{textAlign:"center",padding:"60px 0",color:palette.muted}}><div style={{fontSize:40,marginBottom:12}}>🏨</div><p>No hotels yet</p></div>}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// PLACES WISHLIST — rate places you want to visit / have visited
+// ══════════════════════════════════════════════════════════════
+function PlacesView({ trip, palette, onUpdate }) {
+  const places = trip.places || [];
+  const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
+  const allCities = [...new Set([...cities, ...places.map(p=>p.city).filter(Boolean)])];
+  const [filterCity, setFilterCity] = useState("all");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [showAdd, setShowAdd] = useState(false);
+  const [delId, setDelId] = useState(null);
+  const [expId, setExpId] = useState(null);
+  const [editId, setEditId] = useState(null);
+  const [ef, setEf] = useState({});
+  const blank = () => ({city:cities[0]||"",name:"",category:"sight",address:"",notes:"",status:"want",rating:0,myReview:"",files:[]});
+  const [np, setNp] = useState(blank());
+
+  const PLACE_STATUS = {want:{bg:"#EEE8F8",text:"#5B4C8A",label:"Want to Go"},been:{bg:"#DFF0E1",text:"#3A6B42",label:"Been There"},skip:{bg:"#F1EFEF",text:"#6A6060",label:"Skip"}};
+  const PLACE_CATS = [{v:"sight",l:"🏛️ Sight"},{v:"nature",l:"🌿 Nature"},{v:"museum",l:"🎨 Museum"},{v:"market",l:"🛒 Market"},{v:"temple",l:"⛩️ Temple/Church"},{v:"park",l:"🌸 Park"},{v:"shopping",l:"🛍️ Shopping"},{v:"activity",l:"🎭 Activity"},{v:"other",l:"📍 Other"}];
+
+  const cycleStatus=(p)=>{const s=["want","been","skip"];const i=s.indexOf(p.status);onUpdate("places",places.map(x=>x.id===p.id?{...x,status:s[(i+1)%s.length]}:x));};
+  const doDelete=(id)=>{onUpdate("places",places.filter(x=>x.id!==id));setDelId(null);setExpId(null);};
+  const saveEdit=()=>{onUpdate("places",places.map(x=>x.id===editId?{...x,...ef}:x));setEditId(null);};
+  const addPlace=()=>{
+    if(!np.name.trim())return;
+    onUpdate("places",[...places,{...np,id:uid()}]);
+    setShowAdd(false); setNp(blank());
+  };
+
+  const filtered = places.filter(p=>
+    (filterCity==="all"||p.city===filterCity)&&
+    (filterStatus==="all"||p.status===filterStatus)
+  );
+
+  return (
+    <div style={{padding:"20px 16px 40px"}}>
+      {delId&&<Confirm message="Delete this place?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+        <div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Places</h2>
+          <p style={{color:palette.muted,fontSize:13,margin:0}}>{places.filter(p=>p.status==="want").length} want to go · {places.filter(p=>p.status==="been").length} visited</p>
+        </div>
+        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add</button>
+      </div>
+
+      {/* Filters */}
+      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:8}}>
+        <button onClick={()=>setFilterCity("all")} style={{flexShrink:0,padding:"6px 14px",borderRadius:99,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:filterCity==="all"?palette.primary:palette.primaryLight,color:filterCity==="all"?"#fff":palette.primary}}>All cities</button>
+        {allCities.map(c=><button key={c} onClick={()=>setFilterCity(c)} style={{flexShrink:0,padding:"6px 14px",borderRadius:99,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:filterCity===c?palette.primary:palette.primaryLight,color:filterCity===c?"#fff":palette.primary}}>{c}</button>)}
+      </div>
+      <div style={{display:"flex",gap:6,marginBottom:14}}>
+        {["all","want","been","skip"].map(s=><button key={s} onClick={()=>setFilterStatus(s)} style={{flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:filterStatus===s?palette.primary:"#F5F0F2",color:filterStatus===s?"#fff":palette.muted}}>{s==="all"?"All":PLACE_STATUS[s]?.label}</button>)}
+      </div>
+
+      {/* Add form */}
+      {showAdd&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
+          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Add Place</h3>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+            {cities.length>0
+              ? <Inp label="City" value={np.city} opts={cities} onChange={v=>setNp(p=>({...p,city:v}))}/>
+              : <Inp label="City" value={np.city} placeholder="City" onChange={v=>setNp(p=>({...p,city:v}))}/>}
+            <Inp label="Category" value={np.category} opts={PLACE_CATS} onChange={v=>setNp(p=>({...p,category:v}))}/>
+          </div>
+          <Inp label="Place Name" value={np.name} placeholder="e.g. Senso-ji Temple" onChange={v=>setNp(p=>({...p,name:v}))}/>
+          <Inp label="Address / Area" value={np.address} placeholder="District or address" onChange={v=>setNp(p=>({...p,address:v}))}/>
+          <Inp label="Notes" value={np.notes} placeholder="Opening hours, tips, why you want to go…" onChange={v=>setNp(p=>({...p,notes:v}))} multi rows={2}/>
+          <div style={{marginBottom:12}}>
+            <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
+            <StarRating value={np.rating} onChange={v=>setNp(p=>({...p,rating:v}))}/>
+          </div>
+          <Inp label="My Review" value={np.myReview} placeholder="What did you think?" onChange={v=>setNp(p=>({...p,myReview:v}))} multi rows={2}/>
+          <MediaUpload files={np.files||[]} onAdd={f=>setNp(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNp(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} palette={palette}/>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={addPlace} disabled={!np.name.trim()} style={{flex:1,background:np.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:np.name.trim()?"pointer":"not-allowed"}}>Add Place</button>
+            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {filtered.length===0&&!showAdd&&(
+        <div style={{textAlign:"center",padding:"50px 0",color:palette.muted}}>
+          <div style={{fontSize:40,marginBottom:12}}>🗺️</div>
+          <p style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 6px"}}>No places yet</p>
+          <p style={{fontSize:13}}>Add sights, parks, museums — rate them to remember for next time</p>
+        </div>
+      )}
+
+      {filtered.map(p=>{
+        const st=PLACE_STATUS[p.status]||PLACE_STATUS.want;
+        const cat=PLACE_CATS.find(c=>c.v===p.category)||PLACE_CATS[PLACE_CATS.length-1];
+        const isExp=expId===p.id, isEd=editId===p.id;
+        const hasFiles=(p.files||[]).length>0;
+        return (
+          <div key={p.id} style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,marginBottom:10,overflow:"hidden"}}>
+            <div style={{padding:"14px 16px",cursor:"pointer"}} onClick={()=>!isEd&&setExpId(isExp?null:p.id)}>
+              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>
+                    <span style={{fontSize:13}}>{cat.l.split(" ")[0]}</span>
+                    <span style={{fontSize:11,background:cityColor(p.city)+"20",color:cityColor(p.city),padding:"1px 8px",borderRadius:99,fontWeight:700}}>{p.city}</span>
+                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700}}>📎</span>}
+                  </div>
+                  <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 4px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:isExp?"normal":"nowrap"}}>{p.name}</h3>
+                  {p.address&&<p style={{fontSize:11,color:palette.muted,margin:"0 0 4px",display:"flex",alignItems:"center",gap:3}}><MapPin size={10}/>{p.address}</p>}
+                  {p.rating>0&&<StarRating value={p.rating} onChange={()=>{}} size={13}/>}
+                </div>
+                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,marginLeft:10}}>
+                  <button onClick={e=>{e.stopPropagation();cycleStatus(p);}} style={{background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"4px 9px",cursor:"pointer",whiteSpace:"nowrap"}}>{st.label}</button>
+                  <ChevronDown size={13} color={palette.muted} style={{transform:isExp?"rotate(180deg)":"none",transition:"0.2s"}}/>
+                </div>
+              </div>
+            </div>
+            {isExp&&(
+              <div style={{padding:"0 16px 16px",borderTop:`1px solid ${palette.border}`}}>
+                {isEd?(
+                  <div style={{paddingTop:14}}>
+                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                      {cities.length>0?<Inp label="City" value={ef.city||""} opts={cities} onChange={v=>setEf(p=>({...p,city:v}))}/>:<Inp label="City" value={ef.city||""} onChange={v=>setEf(p=>({...p,city:v}))}/>}
+                      <Inp label="Category" value={ef.category||"sight"} opts={PLACE_CATS} onChange={v=>setEf(p=>({...p,category:v}))}/>
+                    </div>
+                    <Inp label="Name" value={ef.name||""} onChange={v=>setEf(p=>({...p,name:v}))}/>
+                    <Inp label="Address" value={ef.address||""} onChange={v=>setEf(p=>({...p,address:v}))}/>
+                    <Inp label="Notes" value={ef.notes||""} onChange={v=>setEf(p=>({...p,notes:v}))} multi rows={2}/>
+                    <div style={{marginBottom:12}}>
+                      <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Rating</label>
+                      <StarRating value={ef.rating||0} onChange={v=>setEf(p=>({...p,rating:v}))}/>
+                    </div>
+                    <Inp label="My Review" value={ef.myReview||""} onChange={v=>setEf(p=>({...p,myReview:v}))} multi rows={2}/>
+                    <MediaUpload files={ef.files||[]} onAdd={f=>setEf(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setEf(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} palette={palette}/>
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={saveEdit} style={{flex:1,background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save</button>
+                      <button onClick={()=>setEditId(null)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
+                    </div>
+                  </div>
+                ):(
+                  <div style={{paddingTop:12}}>
+                    {p.notes&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 3px"}}>NOTES</p><p style={{fontSize:12,color:palette.text,margin:0}}>{p.notes}</p></div>}
+                    {p.myReview&&<div style={{background:palette.primaryLight+"55",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.primary,margin:"0 0 3px"}}>MY REVIEW</p><p style={{fontSize:12,color:palette.text,margin:0}}>{p.myReview}</p></div>}
+                    {hasFiles&&<div style={{marginBottom:10}}><MediaUpload files={p.files||[]} onAdd={f=>onUpdate("places",places.map(x=>x.id===p.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("places",places.map(x=>x.id===p.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/></div>}
+                    <div style={{display:"flex",gap:8}}>
+                      <button onClick={()=>{setEditId(p.id);setEf({...p,files:p.files||[]});}} style={{display:"flex",alignItems:"center",gap:6,background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Edit3 size={13}/>Edit</button>
+                      <button onClick={()=>setDelId(p.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════
+// TRIP SELECTOR — with delete
 // ══════════════════════════════════════════════════════════════
 function TripSelector({ trips, onSelect, onCreate, onImport, onDelete, palette }) {
-  const fileRef = useRef();
-  const [dragging, setDragging] = useState(false);
-  const [delId, setDelId] = useState(null);
+  const fileRef=useRef();
+  const [dragging,setDragging]=useState(false);
+  const [delId,setDelId]=useState(null);
 
-  const parseAndCreate = (file) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const wb = XLSX.read(e.target.result, { type:"binary" });
-        const sheets = {};
-        wb.SheetNames.forEach(n => { sheets[n] = XLSX.utils.sheet_to_json(wb.Sheets[n], { defval:"" }); });
+  const parseAndCreate=(file)=>{
+    const reader=new FileReader();
+    reader.onload=(e)=>{
+      try{
+        const wb=XLSX.read(e.target.result,{type:"binary"});
+        const sheets={};
+        wb.SheetNames.forEach(n=>{sheets[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:""});});
         onImport(parseExcelSheets(sheets));
-      } catch(err) { console.error("Import error:", err); alert("Could not read file. Open F12 console for details."); }
+      }catch(err){console.error("Import error:",err);alert("Could not read file. Open F12 console for details.");}
     };
     reader.readAsBinaryString(file);
   };
 
-  const tripStatus = (t) => {
-    if (!t.startDate) return { label:"Draft", color:"#6A6060", bg:"#F1EFEF" };
-    const du = daysUntil(t.startDate);
-    if (du > 0)  return { label:`In ${du} days`, color:"#8A6200", bg:"#FFF3DC" };
-    if (du === 0) return { label:"Today!", color:"#fff", bg:"#C97B84" };
-    if (daysUntil(t.endDate) >= 0) return { label:"Ongoing", color:"#3A6B42", bg:"#DFF0E1" };
-    return { label:"Completed", color:"#6A6060", bg:"#F1EFEF" };
+  const tripStatus=(t)=>{
+    if(!t.startDate)return{label:"Draft",color:"#6A6060",bg:"#F1EFEF"};
+    const du=daysUntil(t.startDate);
+    if(du>0)return{label:`In ${du} days`,color:"#8A6200",bg:"#FFF3DC"};
+    if(du===0)return{label:"Today!",color:"#fff",bg:"#C97B84"};
+    if(daysUntil(t.endDate)>=0)return{label:"Ongoing",color:"#3A6B42",bg:"#DFF0E1"};
+    return{label:"Completed",color:"#6A6060",bg:"#F1EFEF"};
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:"linear-gradient(160deg,#FAF7F8 0%,#F2DDE1 100%)", fontFamily:"'DM Sans',sans-serif" }}>
+    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#FAF7F8 0%,#F2DDE1 100%)",fontFamily:"'DM Sans',sans-serif"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
-      {delId && <Confirm message="Permanently delete this trip and all its data? This cannot be undone." onOk={()=>{ onDelete(delId); setDelId(null); }} onNo={()=>setDelId(null)}/>}
+      {delId&&<Confirm message="Permanently delete this trip and all its data? This cannot be undone." onOk={()=>{onDelete(delId);setDelId(null);}} onNo={()=>setDelId(null)}/>}
 
-      <div style={{ padding:"44px 24px 0" }}>
-        <div style={{ display:"flex",alignItems:"center",gap:12,marginBottom:6 }}>
-          <span style={{ fontSize:38 }}>☁️</span>
+      <div style={{padding:"44px 24px 0"}}>
+        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
+          <span style={{fontSize:38}}>☁️</span>
           <div>
-            <h1 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:28,fontWeight:700,color:"#2D2426",margin:0 }}>Kumo Travel</h1>
-            <p style={{ color:"#9A8F92",fontSize:13,margin:0 }}>All your trips in one place</p>
+            <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:28,fontWeight:700,color:"#2D2426",margin:0}}>Kumo Travel</h1>
+            <p style={{color:"#9A8F92",fontSize:13,margin:0}}>All your trips in one place</p>
           </div>
         </div>
       </div>
 
-      <div style={{ padding:"28px 24px 60px" }}>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20 }}>
-          <button onClick={onCreate}
-            style={{ background:palette.primary,color:"#fff",border:"none",borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
+      <div style={{padding:"28px 24px 60px"}}>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
+          <button onClick={onCreate} style={{background:palette.primary,color:"#fff",border:"none",borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
             <Plus size={22}/>New Trip
           </button>
-          <button onClick={()=>fileRef.current.click()}
-            onDragOver={e=>{e.preventDefault();setDragging(true);}}
-            onDragLeave={()=>setDragging(false)}
-            onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)parseAndCreate(f);}}
-            style={{ background:dragging?palette.primaryLight:"#fff",color:palette.primary,border:`2px dashed ${palette.primary}`,borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6 }}>
+          <button onClick={()=>fileRef.current.click()} onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)parseAndCreate(f);}}
+            style={{background:dragging?palette.primaryLight:"#fff",color:palette.primary,border:`2px dashed ${palette.primary}`,borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
             <Upload size={22}/>Import Excel
           </button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{ display:"none" }} onChange={e=>{if(e.target.files[0])parseAndCreate(e.target.files[0]);}}/>
+          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>{if(e.target.files[0])parseAndCreate(e.target.files[0]);}}/>
         </div>
 
-        {trips.length===0 && (
+        {trips.length===0&&(
           <>
-            <button onClick={()=>onImport({...DEMO_TRIP,id:uid()})}
-              style={{ width:"100%",background:"#fff",color:"#9A8F92",border:"1px solid #EDE5E7",borderRadius:14,padding:"13px",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:28 }}>
-              ✈️ Load Japan demo trip
-            </button>
-            <div style={{ textAlign:"center",padding:"20px 0",color:"#9A8F92" }}>
-              <div style={{ fontSize:48,marginBottom:12 }}>🗺️</div>
-              <p style={{ fontSize:16,fontWeight:700,color:"#2D2426",margin:"0 0 6px" }}>No trips yet</p>
-              <p style={{ fontSize:13 }}>Create a new trip or import your Excel planner above</p>
+            <button onClick={()=>onImport({...DEMO_TRIP,id:uid()})} style={{width:"100%",background:"#fff",color:"#9A8F92",border:"1px solid #EDE5E7",borderRadius:14,padding:"13px",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:28}}>✈️ Load Japan demo trip</button>
+            <div style={{textAlign:"center",padding:"20px 0",color:"#9A8F92"}}>
+              <div style={{fontSize:48,marginBottom:12}}>🗺️</div>
+              <p style={{fontSize:16,fontWeight:700,color:"#2D2426",margin:"0 0 6px"}}>No trips yet</p>
+              <p style={{fontSize:13}}>Create a trip or import your Excel planner</p>
             </div>
           </>
         )}
 
-        {trips.length>0 && (
+        {trips.length>0&&(
           <>
-            <p style={{ fontSize:11,fontWeight:800,color:"#9A8F92",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 12px" }}>Your Trips ({trips.length})</p>
-            {trips.map(trip => {
-              const st = tripStatus(trip);
-              const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
+            <p style={{fontSize:11,fontWeight:800,color:"#9A8F92",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 12px"}}>Your Trips ({trips.length})</p>
+            {trips.map(trip=>{
+              const st=tripStatus(trip);
+              const cities=[...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
               return (
-                <div key={trip.id}
-                  style={{ background:"#fff",borderRadius:20,border:"1px solid #EDE5E7",marginBottom:12,boxShadow:"0 2px 14px rgba(0,0,0,0.05)",overflow:"hidden",transition:"transform 0.15s" }}
-                  onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"}
-                  onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-                  <div onClick={()=>onSelect(trip.id)} style={{ padding:"18px 20px",cursor:"pointer" }}>
-                    <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8 }}>
+                <div key={trip.id} style={{background:"#fff",borderRadius:20,border:"1px solid #EDE5E7",marginBottom:12,boxShadow:"0 2px 14px rgba(0,0,0,0.05)",overflow:"hidden",transition:"transform 0.15s"}} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
+                  {/* Boarding pass top strip */}
+                  <div style={{height:3,background:`linear-gradient(90deg,${palette.primary},${palette.accent})`}}/>
+                  <div onClick={()=>onSelect(trip.id)} style={{padding:"16px 20px",cursor:"pointer"}}>
+                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
                       <div>
-                        <h3 style={{ fontSize:17,fontWeight:700,color:"#2D2426",margin:"0 0 3px",fontFamily:"'Playfair Display',Georgia,serif" }}>{trip.tripName}</h3>
-                        <p style={{ fontSize:12,color:"#9A8F92",margin:0 }}>{fmtDateShort(trip.startDate)} — {fmtDateShort(trip.endDate)}</p>
+                        <h3 style={{fontSize:17,fontWeight:700,color:"#2D2426",margin:"0 0 3px",fontFamily:"'Playfair Display',Georgia,serif"}}>{trip.tripName}</h3>
+                        <p style={{fontSize:12,color:"#9A8F92",margin:0}}>{fmtDateShort(trip.startDate)} — {fmtDateShort(trip.endDate)}</p>
                       </div>
-                      <span style={{ background:st.bg,color:st.color,fontSize:10,fontWeight:800,padding:"4px 10px",borderRadius:99,flexShrink:0 }}>{st.label}</span>
+                      <span style={{background:st.bg,color:st.color,fontSize:10,fontWeight:800,padding:"4px 10px",borderRadius:99,flexShrink:0}}>{st.label}</span>
                     </div>
-                    <div style={{ display:"flex",gap:6,flexWrap:"wrap",marginBottom:8 }}>
-                      {cities.slice(0,5).map(c=><span key={c} style={{ background:cityColor(c)+"20",color:cityColor(c),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99 }}>{c}</span>)}
-                      {cities.length>5&&<span style={{ fontSize:11,color:"#9A8F92" }}>+{cities.length-5}</span>}
+                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
+                      {cities.slice(0,5).map(c=><span key={c} style={{background:cityColor(c)+"20",color:cityColor(c),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99}}>{c}</span>)}
+                      {cities.length>5&&<span style={{fontSize:11,color:"#9A8F92"}}>+{cities.length-5}</span>}
                     </div>
-                    <div style={{ display:"flex",gap:14,flexWrap:"wrap" }}>
-                      {trip.itinerary.length>0&&<span style={{ fontSize:12,color:"#9A8F92" }}>📅 {trip.itinerary.length} days</span>}
-                      {(trip.memories||[]).length>0&&<span style={{ fontSize:12,color:"#9A8F92" }}>📸 {trip.memories.length} memories</span>}
-                      {(trip.expenses||[]).length>0&&<span style={{ fontSize:12,color:"#9A8F92" }}>💸 {trip.expenses.length} expenses</span>}
+                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
+                      {trip.itinerary.length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>📅 {trip.itinerary.length} days</span>}
+                      {(trip.memories||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>📸 {trip.memories.length}</span>}
+                      {(trip.expenses||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>💸 {trip.expenses.length} expenses</span>}
+                      {(trip.places||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>🗺️ {trip.places.length} places</span>}
                     </div>
                   </div>
-                  <div style={{ borderTop:"1px solid #F5F0F2",padding:"10px 20px",display:"flex",justifyContent:"flex-end" }}>
-                    <button onClick={e=>{e.stopPropagation();setDelId(trip.id);}}
-                      style={{ display:"flex",alignItems:"center",gap:5,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
-                      <Trash2 size={12}/>Delete Trip
+                  {/* Tear line + delete */}
+                  <div style={{margin:"0",height:0,borderTop:"1.5px dashed #EDE5E7",position:"relative"}}>
+                    <div style={{position:"absolute",left:-8,top:-8,width:16,height:16,borderRadius:"50%",background:"linear-gradient(160deg,#FAF7F8,#F2DDE1)"}}/>
+                    <div style={{position:"absolute",right:-8,top:-8,width:16,height:16,borderRadius:"50%",background:"linear-gradient(160deg,#FAF7F8,#F2DDE1)"}}/>
+                  </div>
+                  <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+                    <span style={{fontSize:11,color:"#9A8F92"}}>Tap card to open →</span>
+                    <button onClick={e=>{e.stopPropagation();setDelId(trip.id);}} style={{display:"flex",alignItems:"center",gap:5,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                      <Trash2 size={12}/>Delete
                     </button>
                   </div>
                 </div>
@@ -1293,242 +1763,6 @@ function TripSelector({ trips, onSelect, onCreate, onImport, onDelete, palette }
 }
 
 // ══════════════════════════════════════════════════════════════
-// RESTAURANTS VIEW — with cuisine autocomplete
-// ══════════════════════════════════════════════════════════════
-function RestaurantsView({ trip, palette, onUpdate }) {
-  const allCities=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];
-  const [city,setCity]=useState(allCities[0]||"");
-  const [search,setSearch]=useState("");
-  const [fSt,setFSt]=useState("all");
-  const [showAdd,setShowAdd]=useState(false);
-  const [showAddCity,setShowAddCity]=useState(false);
-  const [delId,setDelId]=useState(null);
-  const [nr,setNr]=useState({city:allCities[0]||"",name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",bookingFiles:[]});
-
-  const switchCity=(c)=>{setCity(c);setNr(p=>({...p,city:c}));};
-  useEffect(()=>{const u=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];if(u.length>0&&!u.includes(city))switchCity(u[u.length-1]);},[trip.restaurants]);
-
-  const SO=["wishlist","chosen","visited","skipped"];
-  const cycle=(r)=>{const i=SO.indexOf(r.status);onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,status:SO[(i+1)%SO.length]}:x));};
-  const doDelete=(id)=>{onUpdate("restaurants",trip.restaurants.filter(x=>x.id!==id));setDelId(null);};
-  const addR=()=>{
-    if(!nr.name.trim())return;
-    onUpdate("restaurants",[...trip.restaurants,{...nr,id:uid()}]);
-    setShowAdd(false);
-    setNr({city,name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",bookingFiles:[]});
-  };
-  const addCity=(name)=>{onUpdate("restaurants",[...trip.restaurants,{id:uid(),city:name,name:"",cuisine:"",price:"",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",bookingFiles:[]}]);setShowAddCity(false);};
-
-  const filtered=trip.restaurants.filter(r=>r.city===city&&r.name&&(fSt==="all"||r.status===fSt)&&(search===""||r.name.toLowerCase().includes(search.toLowerCase())||(r.cuisine||"").toLowerCase().includes(search.toLowerCase())));
-
-  return (
-    <div style={{ padding:"24px 20px 40px" }}>
-      {delId&&<Confirm message="Remove this restaurant?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-      {showAddCity&&<CityDialog onOk={addCity} onNo={()=>setShowAddCity(false)} palette={palette}/>}
-
-      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16 }}>
-        <div>
-          <h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Restaurants</h2>
-          <p style={{ color:palette.muted,fontSize:13,margin:0 }}>{trip.restaurants.filter(r=>r.name&&r.status==="wishlist").length} wishlist · {trip.restaurants.filter(r=>r.name&&r.status==="chosen").length} chosen</p>
-        </div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{ display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-          <Plus size={15}/>Add
-        </button>
-      </div>
-
-      <div style={{ display:"flex",gap:6,overflowX:"auto",paddingBottom:10,marginBottom:8 }}>
-        {allCities.map(c=><button key={c} onClick={()=>switchCity(c)} style={{ flexShrink:0,padding:"7px 16px",borderRadius:99,border:"none",fontSize:13,fontWeight:700,cursor:"pointer",background:city===c?palette.primary:palette.primaryLight,color:city===c?"#fff":palette.primary }}>{c}</button>)}
-        <button onClick={()=>setShowAddCity(true)} style={{ flexShrink:0,padding:"7px 14px",borderRadius:99,border:`1.5px dashed ${palette.primary}`,background:"transparent",color:palette.primary,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4 }}><Plus size={13}/>City</button>
-      </div>
-
-      {showAdd&&(
-        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)" }}>
-          <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>Add Restaurant {city?"— "+city:""}</h3>
-          <Inp label="Name" value={nr.name} placeholder="Restaurant name" onChange={v=>setNr(p=>({...p,name:v}))}/>
-          <CuisineInput value={nr.cuisine} onChange={v=>setNr(p=>({...p,cuisine:v}))} palette={palette}/>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
-            <Inp label="Price" value={nr.price} onChange={v=>setNr(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/>
-            <Inp label="Reservation" value={nr.reservationRequired} onChange={v=>setNr(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/>
-          </div>
-          <Inp label="Must-try dish" value={nr.mustTry} placeholder="Signature item" onChange={v=>setNr(p=>({...p,mustTry:v}))}/>
-          <Inp label="Area / District" value={nr.area} placeholder="Neighborhood" onChange={v=>setNr(p=>({...p,area:v}))}/>
-          <Inp label="Notes" value={nr.notes} placeholder="Hours, tips…" onChange={v=>setNr(p=>({...p,notes:v}))} multi rows={2}/>
-          {nr.reservationRequired!=="No"&&(
-            <BookingUpload
-              files={nr.bookingFiles||[]}
-              onAdd={f=>setNr(p=>({...p,bookingFiles:[...(p.bookingFiles||[]),f]}))}
-              onRemove={i=>setNr(p=>({...p,bookingFiles:p.bookingFiles.filter((_,pi)=>pi!==i)}))}
-              palette={palette}/>
-          )}
-          <div style={{ display:"flex",gap:8 }}>
-            <button onClick={addR} disabled={!nr.name.trim()} style={{ flex:1,background:nr.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nr.name.trim()?"pointer":"not-allowed" }}>Add Restaurant</button>
-            <button onClick={()=>setShowAdd(false)} style={{ flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer" }}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ marginBottom:12 }}>
-        <div style={{ display:"flex",alignItems:"center",background:"#fff",border:`1px solid ${palette.border}`,borderRadius:12,padding:"0 12px",marginBottom:8 }}>
-          <Search size={14} color={palette.muted}/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{ flex:1,border:"none",outline:"none",padding:"10px 8px",fontSize:13,fontFamily:"inherit",color:palette.text,background:"transparent" }}/>
-          {search&&<button onClick={()=>setSearch("")} style={{ background:"none",border:"none",cursor:"pointer",padding:0 }}><X size={14} color={palette.muted}/></button>}
-        </div>
-        <div style={{ display:"flex",gap:6,overflowX:"auto" }}>
-          {["all","wishlist","chosen","visited","skipped"].map(s=><button key={s} onClick={()=>setFSt(s)} style={{ flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:fSt===s?palette.primary:"#F5F0F2",color:fSt===s?"#fff":palette.muted }}>{s==="all"?"All":REST_STATUS[s]?.label}</button>)}
-        </div>
-      </div>
-
-      {filtered.length===0&&<div style={{ textAlign:"center",padding:"40px 0",color:palette.muted }}><div style={{ fontSize:32,marginBottom:8 }}>🍽️</div><p>No restaurants found</p></div>}
-      {filtered.map(r=>{
-        const st=REST_STATUS[r.status]||REST_STATUS.wishlist;
-        const hasFiles=(r.bookingFiles||[]).length>0;
-        return (
-          <div key={r.id} style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:10 }}>
-            <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6 }}>
-              <div style={{ flex:1,minWidth:0 }}>
-                <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 5px" }}>{r.name}</h3>
-                <div style={{ display:"flex",gap:6,flexWrap:"wrap",alignItems:"center" }}>
-                  {r.cuisine&&<span style={{ fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"2px 8px",borderRadius:99,fontWeight:600 }}>{r.cuisine}</span>}
-                  {r.price&&<span style={{ fontSize:12,color:palette.primary,fontWeight:700 }}>{r.price}</span>}
-                  {r.area&&<span style={{ fontSize:11,color:palette.muted,display:"flex",alignItems:"center",gap:3 }}><MapPin size={10}/>{r.area}</span>}
-                  {hasFiles&&<span style={{ fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700 }}>📄 Confirmation</span>}
-                </div>
-              </div>
-              <div style={{ display:"flex",gap:6,marginLeft:8,flexShrink:0 }}>
-                <button onClick={()=>cycle(r)} style={{ background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"5px 10px",cursor:"pointer" }}>{st.label}</button>
-                <button onClick={()=>setDelId(r.id)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"5px 7px",cursor:"pointer" }}><Trash2 size={11}/></button>
-              </div>
-            </div>
-            {r.mustTry&&<p style={{ fontSize:12,color:palette.text,margin:"0 0 4px" }}>⭐ {r.mustTry}</p>}
-            {r.reservationRequired&&r.reservationRequired!=="No"&&<span style={{ fontSize:11,background:"#FFF3DC",color:"#8A6200",padding:"2px 8px",borderRadius:99,fontWeight:600,display:"inline-block",marginBottom:4 }}>Reservation: {r.reservationRequired}</span>}
-            {r.notes&&<p style={{ fontSize:11,color:palette.muted,margin:"4px 0 0",lineHeight:1.4 }}>{r.notes}</p>}
-            {hasFiles&&(
-              <div style={{ marginTop:8 }}>
-                {(r.bookingFiles||[]).map((f,i)=>(
-                  <button key={i} onClick={()=>{ const a=document.createElement("a"); a.href=f.data; a.download=f.name; a.click(); }}
-                    style={{ display:"inline-flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer",marginRight:6 }}>
-                    📄 {f.name}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-// HOTELS VIEW — with booking upload
-// ══════════════════════════════════════════════════════════════
-function HotelsView({ trip, palette, onUpdate }) {
-  const [copied,setCopied]=useState(null);
-  const [showAdd,setShowAdd]=useState(false);
-  const [delId,setDelId]=useState(null);
-  const [nh,setNh]=useState({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",bookingFiles:[]});
-
-  const copy=(id,txt)=>{navigator.clipboard.writeText(txt).catch(()=>{});setCopied(id);setTimeout(()=>setCopied(null),1500);};
-  const doDelete=(id)=>{onUpdate("hotels",trip.hotels.filter(x=>x.id!==id));setDelId(null);};
-  const addH=()=>{
-    if(!nh.name.trim())return;
-    onUpdate("hotels",[...trip.hotels,{...nh,id:uid()}]);
-    setShowAdd(false);
-    setNh({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",bookingFiles:[]});
-  };
-
-  return (
-    <div style={{ padding:"24px 20px 40px" }}>
-      {delId&&<Confirm message="Remove this hotel?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
-        <div><h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Hotels</h2><p style={{ color:palette.muted,fontSize:13,margin:0 }}>{trip.hotels.length} stays</p></div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{ display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}><Plus size={15}/>Add Hotel</button>
-      </div>
-
-      {showAdd&&(
-        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)" }}>
-          <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>New Stay</h3>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
-            <Inp label="City" value={nh.city} placeholder="e.g. Tokyo" onChange={v=>setNh(p=>({...p,city:v}))}/>
-            <Inp label="Hotel Name" value={nh.name} placeholder="Hotel name" onChange={v=>setNh(p=>({...p,name:v}))}/>
-          </div>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
-            <Inp label="Check-in" type="date" value={nh.checkIn} onChange={v=>setNh(p=>({...p,checkIn:v}))}/>
-            <Inp label="Check-out" type="date" value={nh.checkOut} onChange={v=>setNh(p=>({...p,checkOut:v}))}/>
-          </div>
-          <Inp label="Confirmation #" value={nh.confirmation} placeholder="Booking reference" onChange={v=>setNh(p=>({...p,confirmation:v}))}/>
-          <Inp label="Address" value={nh.address} placeholder="Full address" onChange={v=>setNh(p=>({...p,address:v}))}/>
-          <Inp label="Phone" value={nh.phone} placeholder="+XX XXX XXXX" onChange={v=>setNh(p=>({...p,phone:v}))}/>
-          <Inp label="Notes" value={nh.notes} placeholder="Early check-in, preferences…" onChange={v=>setNh(p=>({...p,notes:v}))} multi rows={2}/>
-          <BookingUpload
-            files={nh.bookingFiles||[]}
-            onAdd={f=>setNh(p=>({...p,bookingFiles:[...(p.bookingFiles||[]),f]}))}
-            onRemove={i=>setNh(p=>({...p,bookingFiles:p.bookingFiles.filter((_,pi)=>pi!==i)}))}
-            palette={palette}/>
-          <div style={{ display:"flex",gap:8 }}>
-            <button onClick={addH} disabled={!nh.name.trim()} style={{ flex:1,background:nh.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nh.name.trim()?"pointer":"not-allowed" }}>Add Hotel</button>
-            <button onClick={()=>setShowAdd(false)} style={{ flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer" }}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {trip.hotels.map(h=>{
-        const nights=nightsBetween(h.checkIn,h.checkOut),du=daysUntil(h.checkIn);
-        const active=new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date();
-        const past=new Date(h.checkOut+"T00:00:00")<new Date();
-        const hasFiles=(h.bookingFiles||[]).length>0;
-        return(
-          <div key={h.id} style={{ background:"#fff",borderRadius:20,border:`1.5px solid ${active?palette.primary+"44":palette.border}`,marginBottom:12,overflow:"hidden",opacity:past?0.65:1,boxShadow:active?`0 4px 20px ${palette.primary}18`:"0 1px 8px rgba(0,0,0,0.04)" }}>
-            {active&&<div style={{ background:`linear-gradient(90deg,${palette.primary},${palette.accent})`,height:4 }}/>}
-            <div style={{ padding:"16px 18px" }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10 }}>
-                <div>
-                  <div style={{ display:"flex",alignItems:"center",gap:8,marginBottom:5 }}>
-                    <span style={{ background:cityColor(h.city)+"20",color:cityColor(h.city),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99 }}>{h.city}</span>
-                    {active&&<span style={{ background:palette.primaryLight,color:palette.primary,fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:99 }}>STAYING HERE</span>}
-                    {hasFiles&&<span style={{ fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"2px 8px",borderRadius:99,fontWeight:700 }}>📄 Docs</span>}
-                  </div>
-                  <h3 style={{ fontSize:16,fontWeight:700,color:palette.text,margin:0 }}>{h.name}</h3>
-                </div>
-                <div style={{ textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6 }}>
-                  <div><div style={{ fontSize:20,fontWeight:800,color:palette.primary }}>{nights}</div><div style={{ fontSize:11,color:palette.muted,fontWeight:600 }}>night{nights!==1?"s":""}</div></div>
-                  <button onClick={()=>setDelId(h.id)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"5px 7px",cursor:"pointer" }}><Trash2 size={12}/></button>
-                </div>
-              </div>
-              <div style={{ background:"#FAF8F9",borderRadius:12,padding:"10px 12px",marginBottom:10,display:"flex",justifyContent:"space-between" }}>
-                <div><p style={{ fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px" }}>CHECK IN</p><p style={{ fontSize:13,fontWeight:700,color:palette.text,margin:0 }}>{fmtDate(h.checkIn)}</p></div>
-                <div style={{ width:1,background:palette.border }}/>
-                <div style={{ textAlign:"right" }}><p style={{ fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px" }}>CHECK OUT</p><p style={{ fontSize:13,fontWeight:700,color:palette.text,margin:0 }}>{fmtDate(h.checkOut)}</p></div>
-              </div>
-              {!past&&du>0&&<p style={{ fontSize:11,color:palette.muted,margin:"0 0 10px",textAlign:"center" }}>Check-in in {du} day{du!==1?"s":""}</p>}
-              <div style={{ display:"flex",gap:8 }}>
-                {h.confirmation&&<button onClick={()=>copy(h.id,h.confirmation)} style={{ flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:copied===h.id?"#DFF0E1":palette.primaryLight,color:copied===h.id?"#3A6B42":palette.primary,border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer",transition:"all 0.2s" }}>{copied===h.id?<Check size={13}/>:<Copy size={13}/>}{copied===h.id?"Copied!":h.confirmation}</button>}
-                {h.address&&<a href={`https://maps.google.com/?q=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer" style={{ display:"flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,borderRadius:10,padding:"10px 14px",fontSize:12,fontWeight:700,textDecoration:"none" }}><MapPin size={13}/>Map</a>}
-              </div>
-              {hasFiles&&(
-                <div style={{ marginTop:10,paddingTop:10,borderTop:`1px solid ${palette.border}` }}>
-                  <p style={{ fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 6px" }}>BOOKING DOCUMENTS</p>
-                  <div style={{ display:"flex",gap:6,flexWrap:"wrap" }}>
-                    {h.bookingFiles.map((f,i)=>(
-                      <button key={i} onClick={()=>{ const a=document.createElement("a"); a.href=f.data; a.download=f.name; a.click(); }}
-                        style={{ display:"inline-flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:8,padding:"5px 10px",fontSize:11,fontWeight:700,cursor:"pointer" }}>
-                        📄 {f.name}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-              {h.notes&&<p style={{ fontSize:12,color:palette.muted,margin:"10px 0 0",lineHeight:1.4 }}>{h.notes}</p>}
-            </div>
-          </div>
-        );
-      })}
-      {trip.hotels.length===0&&<div style={{ textAlign:"center",padding:"60px 0",color:palette.muted }}><div style={{ fontSize:40,marginBottom:12 }}>🏨</div><p>No hotels yet</p></div>}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
 // SETTINGS VIEW
 // ══════════════════════════════════════════════════════════════
 function SettingsView({ trip, palette, paletteName, setPaletteName, onUpdate, onReset, onImportNew }) {
@@ -1537,148 +1771,135 @@ function SettingsView({ trip, palette, paletteName, setPaletteName, onUpdate, on
   const [sd,setSd]=useState(trip.startDate);
   const [ed,setEd]=useState(trip.endDate);
   const [confirmReset,setConfirmReset]=useState(false);
-  const save=()=>{ onUpdate("meta",{tripName:tn,startDate:sd,endDate:ed}); setEdit(false); };
-
+  const save=()=>{onUpdate("meta",{tripName:tn,startDate:sd,endDate:ed});setEdit(false);};
   return (
-    <div style={{ padding:"24px 20px 40px" }}>
-      {confirmReset&&<Confirm message="Permanently delete this trip and all its data?" onOk={()=>{ setConfirmReset(false); onReset(); }} onNo={()=>setConfirmReset(false)}/>}
-      <h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 20px" }}>Settings</h2>
-
-      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14 }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14 }}>
-          <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:0 }}>Trip Info</p>
-          <button onClick={()=>{ setTn(trip.tripName); setSd(trip.startDate); setEd(trip.endDate); setEdit(v=>!v); }} style={{ background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>{edit?"Cancel":"Edit"}</button>
+    <div style={{padding:"20px 16px 40px"}}>
+      {confirmReset&&<Confirm message="Permanently delete this trip and all data?" onOk={()=>{setConfirmReset(false);onReset();}} onNo={()=>setConfirmReset(false)}/>}
+      <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 20px"}}>Settings</h2>
+      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+          <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:0}}>Trip Info</p>
+          <button onClick={()=>{setTn(trip.tripName);setSd(trip.startDate);setEd(trip.endDate);setEdit(v=>!v);}} style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>{edit?"Cancel":"Edit"}</button>
         </div>
         {edit?(<>
           <Inp label="Trip Name" value={tn} onChange={setTn}/>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}><Inp label="Start" type="date" value={sd} onChange={setSd}/><Inp label="End" type="date" value={ed} onChange={setEd}/></div>
-          <button onClick={save} style={{ background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer" }}>Save Changes</button>
+          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}><Inp label="Start" type="date" value={sd} onChange={setSd}/><Inp label="End" type="date" value={ed} onChange={setEd}/></div>
+          <button onClick={save} style={{background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 20px",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save</button>
         </>):(
-          <><p style={{ fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>{trip.tripName}</p><p style={{ fontSize:13,color:palette.muted,margin:0 }}>{fmtDate(trip.startDate)} — {fmtDate(trip.endDate)}</p></>
+          <><p style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{trip.tripName}</p><p style={{fontSize:13,color:palette.muted,margin:0}}>{fmtDate(trip.startDate)} — {fmtDate(trip.endDate)}</p></>
         )}
       </div>
-
-      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14 }}>
-        <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>Colour Theme</p>
-        <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:10 }}>
+      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14}}>
+        <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Colour Theme</p>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
           {Object.entries(PALETTES).map(([name,p])=>(
-            <button key={name} onClick={()=>setPaletteName(name)} style={{ background:p.primaryLight,border:`2.5px solid ${paletteName===name?p.primary:"transparent"}`,borderRadius:14,padding:"12px 14px",cursor:"pointer",textAlign:"left",transition:"all 0.15s" }}>
-              <div style={{ width:26,height:26,borderRadius:"50%",background:p.primary,marginBottom:6 }}/>
-              <p style={{ fontSize:12,fontWeight:700,color:p.text,margin:0 }}>{p.name}</p>
+            <button key={name} onClick={()=>setPaletteName(name)} style={{background:p.primaryLight,border:`2.5px solid ${paletteName===name?p.primary:"transparent"}`,borderRadius:14,padding:"12px 14px",cursor:"pointer",textAlign:"left"}}>
+              <div style={{width:26,height:26,borderRadius:"50%",background:p.primary,marginBottom:6}}/>
+              <p style={{fontSize:12,fontWeight:700,color:p.text,margin:0}}>{p.name}</p>
             </button>
           ))}
         </div>
       </div>
-
-      {/* Multi-user instructions */}
-      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14 }}>
-        <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 10px" }}>👥 Share with Others</p>
-        <p style={{ fontSize:13,color:palette.muted,margin:"0 0 10px",lineHeight:1.6 }}>
-          Kumo stores data locally in each browser. To let others use their own trips:
-        </p>
-        <div style={{ display:"flex",flexDirection:"column",gap:8 }}>
-          <div style={{ background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}` }}>
-            <p style={{ fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Option 1 — Share the URL</p>
-            <p style={{ fontSize:12,color:palette.muted,margin:0,lineHeight:1.5 }}>Anyone with your Vercel URL can open Kumo in their own browser. Their data is completely separate from yours — each device has its own storage.</p>
-          </div>
-          <div style={{ background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}` }}>
-            <p style={{ fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Option 2 — Add to Home Screen</p>
-            <p style={{ fontSize:12,color:palette.muted,margin:0,lineHeight:1.5 }}>Each person opens the URL in Safari/Chrome, adds to their home screen, and uses it as their own private app — data never mixes.</p>
-          </div>
-          <div style={{ background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}` }}>
-            <p style={{ fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Option 3 — Cloud sync (future)</p>
-            <p style={{ fontSize:12,color:palette.muted,margin:0,lineHeight:1.5 }}>Adding a backend (Supabase, Firebase) would allow real accounts and shared trips. This is a planned upgrade.</p>
-          </div>
+      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:14}}>
+        <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 10px"}}>👥 Share with Others</p>
+        <div style={{display:"flex",flexDirection:"column",gap:8}}>
+          {[["Share your Vercel URL","Anyone who opens it gets their own private instance — data never mixes between devices."],["Add to Home Screen","Each person adds it via Safari/Chrome share menu. Works like a native app."],["Cloud sync (planned)","Accounts + shared trips via Supabase — a future upgrade."]].map(([title,desc])=>(
+            <div key={title} style={{background:"#FAF8F9",borderRadius:12,padding:"12px 14px",border:`1px solid ${palette.border}`}}>
+              <p style={{fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 3px"}}>{title}</p>
+              <p style={{fontSize:12,color:palette.muted,margin:0,lineHeight:1.5}}>{desc}</p>
+            </div>
+          ))}
         </div>
       </div>
-
-      <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20 }}>
-        <p style={{ fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 12px" }}>Data</p>
-        <button onClick={onImportNew} style={{ display:"block",width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:10 }}>📥 Import / Replace Excel File</button>
-        <button onClick={()=>setConfirmReset(true)} style={{ display:"block",width:"100%",background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer" }}>🗑️ Delete This Trip</button>
+      <div style={{background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20}}>
+        <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 12px"}}>Data</p>
+        <button onClick={onImportNew} style={{display:"block",width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer",marginBottom:10}}>📥 Import / Replace Excel</button>
+        <button onClick={()=>setConfirmReset(true)} style={{display:"block",width:"100%",background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>🗑️ Delete This Trip</button>
       </div>
     </div>
   );
 }
 
 // ══════════════════════════════════════════════════════════════
-// ROOT APP
+// ROOT APP — clean unified navigation
 // ══════════════════════════════════════════════════════════════
 export default function App() {
-  const [paletteName, setPaletteName] = useState("sakura");
-  const [trips, setTrips]             = useState([]);
-  const [activeTripId, setActiveTripId] = useState(null);
-  const [view, setView]               = useState("home");
-  const palette = PALETTES[paletteName];
+  const [paletteName,setPaletteName]=useState("sakura");
+  const [trips,setTrips]=useState([]);
+  const [activeTripId,setActiveTripId]=useState(null);
+  const [view,setView]=useState("home");
+  const palette=PALETTES[paletteName];
 
-  useEffect(() => {
-    try {
-      const saved   = localStorage.getItem("kumo_trips_v3");
-      const savedP  = localStorage.getItem("kumo_palette");
-      const savedAct= localStorage.getItem("kumo_active_v3");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        // Ensure every trip has all required fields (migrations)
-        const migrated = parsed.map(t => ({
-          memories:[], expenses:[], budget:{amount:"",currency:"USD"},
-          route:{stops:[],travelMode:"walking"}, ...t
-        }));
+  useEffect(()=>{
+    try{
+      const saved=localStorage.getItem("kumo_trips_v4");
+      const savedP=localStorage.getItem("kumo_palette");
+      const savedAct=localStorage.getItem("kumo_active_v4");
+      if(saved){
+        const parsed=JSON.parse(saved);
+        const migrated=parsed.map(t=>({memories:[],expenses:[],budget:{amount:"",currency:"USD"},route:{stops:[],travelMode:"walking"},places:[],...t}));
         setTrips(migrated);
-        if (savedAct && migrated.find(t=>t.id===savedAct)) setActiveTripId(savedAct);
+        if(savedAct&&migrated.find(t=>t.id===savedAct))setActiveTripId(savedAct);
       }
-      if (savedP && PALETTES[savedP]) setPaletteName(savedP);
-    } catch(e) { console.error("Load error:", e); }
-  }, []);
+      if(savedP&&PALETTES[savedP])setPaletteName(savedP);
+    }catch(e){console.error("Load error:",e);}
+  },[]);
 
-  useEffect(() => { try { localStorage.setItem("kumo_trips_v3", JSON.stringify(trips)); } catch(e) {} }, [trips]);
-  useEffect(() => { localStorage.setItem("kumo_palette", paletteName); }, [paletteName]);
-  useEffect(() => { if (activeTripId) localStorage.setItem("kumo_active_v3", activeTripId); }, [activeTripId]);
+  useEffect(()=>{try{localStorage.setItem("kumo_trips_v4",JSON.stringify(trips));}catch(e){}},[trips]);
+  useEffect(()=>{localStorage.setItem("kumo_palette",paletteName);},[paletteName]);
+  useEffect(()=>{if(activeTripId)localStorage.setItem("kumo_active_v4",activeTripId);},[activeTripId]);
 
-  const activeTrip = trips.find(t=>t.id===activeTripId) || null;
+  const activeTrip=trips.find(t=>t.id===activeTripId)||null;
 
-  const createTrip = () => {
-    const t = { id:uid(), tripName:`Trip ${trips.length+1}`, startDate:"", endDate:"",
-      itinerary:[], restaurants:[], hotels:[], memories:[], expenses:[],
-      budget:{amount:"",currency:"USD"}, route:{stops:[],travelMode:"walking"} };
-    setTrips(prev=>[...prev,t]); setActiveTripId(t.id); setView("home");
+  const createTrip=()=>{
+    const t={id:uid(),tripName:`Trip ${trips.length+1}`,startDate:"",endDate:"",itinerary:[],restaurants:[],hotels:[],memories:[],expenses:[],budget:{amount:"",currency:"USD"},route:{stops:[],travelMode:"walking"},places:[]};
+    setTrips(prev=>[...prev,t]);setActiveTripId(t.id);setView("home");
   };
-
-  const importTrip = (trip) => {
-    const safe = { memories:[], expenses:[], budget:{amount:"",currency:"USD"},
-      route:{stops:[],travelMode:"walking"}, ...trip };
-    setTrips(prev => { const ex=prev.find(t=>t.id===safe.id); return ex ? prev.map(t=>t.id===safe.id?safe:t) : [...prev,safe]; });
-    setActiveTripId(safe.id); setView("home");
+  const importTrip=(trip)=>{
+    const safe={memories:[],expenses:[],budget:{amount:"",currency:"USD"},route:{stops:[],travelMode:"walking"},places:[],...trip};
+    setTrips(prev=>{const ex=prev.find(t=>t.id===safe.id);return ex?prev.map(t=>t.id===safe.id?safe:t):[...prev,safe];});
+    setActiveTripId(safe.id);setView("home");
   };
-
-  const deleteTrip = (id) => {
-    setTrips(prev=>prev.filter(t=>t.id!==id));
-    if (activeTripId===id) setActiveTripId(null);
-  };
-
-  const updateTrip = useCallback((section, value) => {
-    setTrips(prev => prev.map(t => {
-      if (t.id !== activeTripId) return t;
-      if (section === "meta") return { ...t, ...value };
-      return { ...t, [section]:value };
+  const deleteTrip=(id)=>{setTrips(prev=>prev.filter(t=>t.id!==id));if(activeTripId===id)setActiveTripId(null);};
+  const updateTrip=useCallback((section,value)=>{
+    setTrips(prev=>prev.map(t=>{
+      if(t.id!==activeTripId)return t;
+      if(section==="meta")return{...t,...value};
+      return{...t,[section]:value};
     }));
-  }, [activeTripId]);
+  },[activeTripId]);
 
-  const NAV = [
-    { id:"home",        label:"Home",      Icon:Home },
-    { id:"itinerary",   label:"Itinerary", Icon:Calendar },
-    { id:"restaurants", label:"Eats",      Icon:Utensils },
-    { id:"hotels",      label:"Hotels",    Icon:Hotel },
-    { id:"transport",   label:"Transport", Icon:Train },
-    { id:"finances",    label:"Finances",  Icon:Star },
-    { id:"route",       label:"Route",     Icon:MapPin },
-    { id:"memories",    label:"Memories",  Icon:Camera },
-    { id:"settings",    label:"Settings",  Icon:Settings },
+  // All nav items
+  const NAV=[
+    {id:"home",      label:"Home",      Icon:Home},
+    {id:"itinerary", label:"Itinerary", Icon:Calendar},
+    {id:"eats",      label:"Eats",      Icon:Utensils},
+    {id:"places",    label:"Places",    Icon:MapPin},
+    {id:"hotels",    label:"Hotels",    Icon:Hotel},
+    {id:"transport", label:"Transport", Icon:Train},
+    {id:"route",     label:"Route",     Icon:Globe},
+    {id:"finances",  label:"Finances",  Icon:Star},
+    {id:"memories",  label:"Memories",  Icon:Camera},
+    {id:"settings",  label:"Settings",  Icon:Settings},
   ];
-  const mobileNav = NAV.filter(n=>["home","itinerary","restaurants","finances","memories"].includes(n.id));
-  const unbooked = activeTrip ? activeTrip.itinerary.filter(d=>d.bookingStatus==="needs booking").length : 0;
+  // Mobile: 5 most-used tabs (Hotels now included)
+  const MOB_NAV=[
+    {id:"home",      label:"Home",      Icon:Home},
+    {id:"itinerary", label:"Plan",      Icon:Calendar},
+    {id:"eats",      label:"Eats",      Icon:Utensils},
+    {id:"places",    label:"Places",    Icon:MapPin},
+    {id:"hotels",    label:"Hotels",    Icon:Hotel},
+  ];
+  const unbooked=activeTrip?activeTrip.itinerary.filter(d=>d.bookingStatus==="needs booking").length:0;
 
-  if (!activeTripId || !activeTrip) {
-    return (
+  // Map eats → restaurants key internally
+  const getOnUpdate=(v)=>{
+    if(v==="eats") return (sec,val)=>updateTrip(sec==="restaurants"?sec:sec,val);
+    return updateTrip;
+  };
+
+  if(!activeTripId||!activeTrip){
+    return(
       <>
         <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
         <TripSelector trips={trips} onSelect={id=>{setActiveTripId(id);setView("home");}} onCreate={createTrip} onImport={importTrip} onDelete={deleteTrip} palette={palette}/>
@@ -1686,96 +1907,92 @@ export default function App() {
     );
   }
 
-  const renderView = () => {
-    const p = { trip:activeTrip, palette, onUpdate:updateTrip };
-    switch(view) {
-      case "home":        return <HomeView        {...p} setView={setView}/>;
-      case "itinerary":   return <ItineraryView   {...p}/>;
-      case "restaurants": return <RestaurantsView {...p}/>;
-      case "hotels":      return <HotelsView      {...p}/>;
-      case "transport":   return <TransportView   {...p}/>;
-      case "finances":    return <FinancesView    {...p}/>;
-      case "route":       return <RoutePlannerView {...p}/>;
-      case "memories":    return <MemoriesView    {...p}/>;
-      case "settings":    return <SettingsView    {...p} paletteName={paletteName} setPaletteName={setPaletteName} onReset={()=>deleteTrip(activeTripId)} onImportNew={()=>setActiveTripId(null)}/>;
-      default:            return <HomeView        {...p} setView={setView}/>;
+  const renderView=()=>{
+    const p={trip:activeTrip,palette,onUpdate:updateTrip};
+    switch(view){
+      case "home":      return <HomeView        {...p} setView={setView}/>;
+      case "itinerary": return <ItineraryView   {...p}/>;
+      case "eats":      return <RestaurantsView {...p}/>;
+      case "places":    return <PlacesView      {...p}/>;
+      case "hotels":    return <HotelsView      {...p}/>;
+      case "transport": return <TransportView   {...p}/>;
+      case "route":     return <RoutePlannerView {...p}/>;
+      case "finances":  return <FinancesView    {...p}/>;
+      case "memories":  return <MemoriesView    {...p}/>;
+      case "settings":  return <SettingsView    {...p} paletteName={paletteName} setPaletteName={setPaletteName} onReset={()=>deleteTrip(activeTripId)} onImportNew={()=>setActiveTripId(null)}/>;
+      default:          return <HomeView        {...p} setView={setView}/>;
     }
   };
 
   return (
-    <div style={{ minHeight:"100vh", background:palette.bg, fontFamily:"'DM Sans',-apple-system,sans-serif" }}>
+    <div style={{minHeight:"100vh",background:palette.bg,fontFamily:"'DM Sans',-apple-system,sans-serif"}}>
       <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
       <style>{`
-        @media(min-width:768px){.km-mob-nav{display:none!important;}.km-topbar{display:none!important;}.km-sidebar{display:flex!important;}.km-content{margin-left:240px;}}
-        @media(max-width:767px){.km-sidebar{display:none!important;}.km-content{margin-left:0;padding-bottom:80px;}}
+        @media(min-width:768px){.km-mob{display:none!important;}.km-top{display:none!important;}.km-side{display:flex!important;}.km-main{margin-left:240px;}}
+        @media(max-width:767px){.km-side{display:none!important;}.km-main{margin-left:0;padding-bottom:80px;}}
         *{box-sizing:border-box;}
         ::-webkit-scrollbar{width:4px;height:4px;}
         ::-webkit-scrollbar-thumb{background:#D0C8CA;border-radius:99px;}
       `}</style>
 
       {/* DESKTOP SIDEBAR */}
-      <div className="km-sidebar" style={{ display:"none",position:"fixed",left:0,top:0,bottom:0,width:240,background:"#fff",borderRight:`1px solid ${palette.border}`,flexDirection:"column",zIndex:300,padding:"24px 0 20px" }}>
-        <div style={{ padding:"0 20px 16px",borderBottom:`1px solid ${palette.border}` }}>
-          <div style={{ display:"flex",alignItems:"center",gap:10,marginBottom:14 }}>
-            <span style={{ fontSize:24 }}>☁️</span>
-            <div>
-              <div style={{ fontSize:15,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif" }}>Kumo</div>
-              <div style={{ fontSize:10,color:palette.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em" }}>Travel Planner</div>
-            </div>
+      <div className="km-side" style={{display:"none",position:"fixed",left:0,top:0,bottom:0,width:240,background:"#fff",borderRight:`1px solid ${palette.border}`,flexDirection:"column",zIndex:300,padding:"24px 0 20px"}}>
+        <div style={{padding:"0 20px 16px",borderBottom:`1px solid ${palette.border}`}}>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:14}}>
+            <span style={{fontSize:24}}>☁️</span>
+            <div><div style={{fontSize:15,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif"}}>Kumo</div><div style={{fontSize:10,color:palette.muted,fontWeight:600,textTransform:"uppercase",letterSpacing:"0.05em"}}>Travel Planner</div></div>
           </div>
-          <button onClick={()=>setActiveTripId(null)} style={{ width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-            <span style={{ overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1 }}>{activeTrip.tripName}</span>
-            <span style={{ fontSize:10,opacity:0.65,marginLeft:6,flexShrink:0 }}>↕ trips</span>
+          <button onClick={()=>setActiveTripId(null)} style={{width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 12px",fontSize:12,fontWeight:700,cursor:"pointer",textAlign:"left",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+            <span style={{overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap",flex:1}}>{activeTrip.tripName}</span>
+            <span style={{fontSize:10,opacity:0.65,marginLeft:6,flexShrink:0}}>↕ trips</span>
           </button>
         </div>
-        <nav style={{ flex:1,padding:"12px",overflowY:"auto" }}>
+        <nav style={{flex:1,padding:"12px",overflowY:"auto"}}>
           {NAV.map(({id,label,Icon})=>(
-            <button key={id} onClick={()=>setView(id)} style={{ display:"flex",alignItems:"center",gap:12,width:"100%",background:view===id?palette.primaryLight:"transparent",color:view===id?palette.primary:palette.muted,border:"none",borderRadius:12,padding:"11px 14px",fontSize:13,fontWeight:view===id?700:500,cursor:"pointer",textAlign:"left",transition:"all 0.15s",marginBottom:2 }}>
+            <button key={id} onClick={()=>setView(id)} style={{display:"flex",alignItems:"center",gap:12,width:"100%",background:view===id?palette.primaryLight:"transparent",color:view===id?palette.primary:palette.muted,border:"none",borderRadius:12,padding:"11px 14px",fontSize:13,fontWeight:view===id?700:500,cursor:"pointer",textAlign:"left",transition:"all 0.15s",marginBottom:2}}>
               <Icon size={17} strokeWidth={view===id?2.5:1.8}/>{label}
-              {id==="transport"&&unbooked>0&&<span style={{ marginLeft:"auto",background:"#E05C5C",color:"#fff",fontSize:10,fontWeight:800,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center" }}>{unbooked}</span>}
+              {id==="transport"&&unbooked>0&&<span style={{marginLeft:"auto",background:"#E05C5C",color:"#fff",fontSize:10,fontWeight:800,width:18,height:18,borderRadius:"50%",display:"flex",alignItems:"center",justifyContent:"center"}}>{unbooked}</span>}
             </button>
           ))}
         </nav>
-        <div style={{ padding:"12px 20px",borderTop:`1px solid ${palette.border}` }}>
-          <button onClick={createTrip} style={{ width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"9px 0",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6 }}>
-            <Plus size={14}/>New Trip
-          </button>
+        <div style={{padding:"12px 20px",borderTop:`1px solid ${palette.border}`}}>
+          <button onClick={createTrip} style={{width:"100%",background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"9px 0",fontSize:12,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center",gap:6}}><Plus size={14}/>New Trip</button>
         </div>
       </div>
 
-      {/* MOBILE TOP BAR */}
-      <div className="km-topbar" style={{ position:"sticky",top:0,zIndex:200,background:palette.bg,borderBottom:`1px solid ${palette.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center" }}>
-        <button onClick={()=>setActiveTripId(null)} style={{ display:"flex",alignItems:"center",gap:6,background:"none",border:"none",cursor:"pointer",padding:0 }}>
-          <span style={{ fontSize:18 }}>☁️</span>
-          <span style={{ fontSize:14,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif" }}>Kumo</span>
+      {/* MOBILE TOP BAR — simplified, no nav icons */}
+      <div className="km-top" style={{position:"sticky",top:0,zIndex:200,background:palette.bg,borderBottom:`1px solid ${palette.border}`,padding:"12px 16px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+        <button onClick={()=>setActiveTripId(null)} style={{display:"flex",alignItems:"center",gap:8,background:"none",border:"none",cursor:"pointer",padding:0}}>
+          <span style={{fontSize:18}}>☁️</span>
+          <div style={{textAlign:"left"}}>
+            <div style={{fontSize:13,fontWeight:800,color:palette.text,fontFamily:"'Playfair Display',Georgia,serif",lineHeight:1}}>Kumo</div>
+            <div style={{fontSize:10,color:palette.primary,fontWeight:600,marginTop:1}}>← All Trips</div>
+          </div>
         </button>
-        <span style={{ fontSize:11,fontWeight:700,color:palette.primary,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{activeTrip.tripName}</span>
-        <div style={{ display:"flex",gap:4 }}>
-          <button onClick={()=>setView("route")} style={{ background:view==="route"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer" }}>
-            <MapPin size={17} color={view==="route"?palette.primary:palette.muted}/>
-          </button>
-          <button onClick={()=>setView("transport")} style={{ background:view==="transport"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer",position:"relative" }}>
+        <span style={{fontSize:11,fontWeight:700,color:palette.text,maxWidth:120,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{activeTrip.tripName}</span>
+        <div style={{display:"flex",gap:4}}>
+          <button onClick={()=>setView("transport")} style={{background:view==="transport"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer",position:"relative"}}>
             <Train size={17} color={view==="transport"?palette.primary:palette.muted}/>
-            {unbooked>0&&<span style={{ position:"absolute",top:2,right:2,width:6,height:6,borderRadius:"50%",background:"#E05C5C",border:"1.5px solid "+palette.bg }}/>}
+            {unbooked>0&&<span style={{position:"absolute",top:2,right:2,width:6,height:6,borderRadius:"50%",background:"#E05C5C",border:"1.5px solid "+palette.bg}}/>}
           </button>
-          <button onClick={()=>setView("settings")} style={{ background:view==="settings"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer" }}>
+          <button onClick={()=>setView("settings")} style={{background:view==="settings"?palette.primaryLight:"transparent",border:"none",borderRadius:8,padding:"6px 8px",cursor:"pointer"}}>
             <Settings size={17} color={view==="settings"?palette.primary:palette.muted}/>
           </button>
         </div>
       </div>
 
       {/* MAIN */}
-      <div className="km-content" style={{ minHeight:"100vh" }}>
-        <div style={{ maxWidth:900,margin:"0 auto" }}>{renderView()}</div>
+      <div className="km-main" style={{minHeight:"100vh"}}>
+        <div style={{maxWidth:900,margin:"0 auto"}}>{renderView()}</div>
       </div>
 
-      {/* MOBILE BOTTOM NAV */}
-      <div className="km-mob-nav" style={{ position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:`1px solid ${palette.border}`,display:"flex",justifyContent:"space-around",padding:"8px 0 14px",zIndex:200 }}>
-        {mobileNav.map(({id,label,Icon})=>(
-          <button key={id} onClick={()=>setView(id)} style={{ display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 6px",color:view===id?palette.primary:palette.muted }}>
+      {/* MOBILE BOTTOM NAV — 5 key tabs, Hotels included */}
+      <div className="km-mob" style={{position:"fixed",bottom:0,left:0,right:0,background:"#fff",borderTop:`1px solid ${palette.border}`,display:"flex",justifyContent:"space-around",padding:"8px 0 max(14px,env(safe-area-inset-bottom))",zIndex:200}}>
+        {MOB_NAV.map(({id,label,Icon})=>(
+          <button key={id} onClick={()=>setView(id)} style={{display:"flex",flexDirection:"column",alignItems:"center",gap:3,background:"none",border:"none",cursor:"pointer",padding:"4px 8px",color:view===id?palette.primary:palette.muted,flex:1}}>
             <Icon size={20} strokeWidth={view===id?2.5:1.8}/>
-            <span style={{ fontSize:9,fontWeight:view===id?700:500 }}>{label}</span>
-            {view===id&&<div style={{ width:16,height:2.5,background:palette.primary,borderRadius:99 }}/>}
+            <span style={{fontSize:9,fontWeight:view===id?700:500}}>{label}</span>
+            {view===id&&<div style={{width:16,height:2.5,background:palette.primary,borderRadius:99}}/>}
           </button>
         ))}
       </div>
