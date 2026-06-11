@@ -978,793 +978,1026 @@ function MemoriesView({ trip, palette, onUpdate }) {
     </div>
   );
 }
-function FinancesView({ trip, palette, onUpdate }) {
-  const expenses = trip.expenses || [];
-  const budget   = trip.budget   || { amount:"", currency:"USD" };
-  const [showAdd,setShowAdd]     = useState(false);
-  const [editId,setEditId]       = useState(null);
-  const [delId,setDelId]         = useState(null);
-  const [filterCat,setFilterCat] = useState("all");
-  const [showBudget,setShowBudget] = useState(false);
-  const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
 
-  const blank = () => ({
-    date: new Date().toISOString().split("T")[0],
-    description:"", category:"food",
-    amount:"", currency: budget.currency||"USD",
-    city:"", paidBy:"", notes:""
+// ══════════════════════════════════════════════════════════════
+// FINANCES VIEW — Complete expense tracking system
+// ══════════════════════════════════════════════════════════════
+
+// ─── Finance constants ────────────────────────────────────────
+const CURRENCIES_ALL = ["USD","IDR","JPY","EUR","GBP","AUD","SGD","MYR","THB","KRW","CNY","HKD","TWD","PHP","VND","CHF","CAD","NZD","AED","SAR","INR","BRL","MXN","ZAR"];
+
+const DEFAULT_CATEGORIES = [
+  { id:"food",          label:"Food & Drink",    emoji:"🍜", color:"#C97B84" },
+  { id:"coffee",        label:"Coffee & Café",   emoji:"☕", color:"#C46E3A" },
+  { id:"transport",     label:"Transport",       emoji:"🚄", color:"#5B8DAE" },
+  { id:"accommodation", label:"Accommodation",   emoji:"🏨", color:"#7B6FA0" },
+  { id:"attraction",    label:"Attractions",     emoji:"🎭", color:"#6B8F71" },
+  { id:"shopping",      label:"Shopping",        emoji:"🛍️", color:"#D4A0A7" },
+  { id:"groceries",     label:"Groceries",       emoji:"🛒", color:"#8A7B5C" },
+  { id:"health",        label:"Health",          emoji:"💊", color:"#E05C5C" },
+  { id:"misc",          label:"Miscellaneous",   emoji:"📦", color:"#9A8F92" },
+];
+
+const DEFAULT_WALLETS = [
+  { id:"w1", name:"Cash", icon:"💵", type:"cash",   currency:"USD", balance:0, creditLimit:0, notes:"" },
+  { id:"w2", name:"Credit Card", icon:"💳", type:"credit", currency:"USD", balance:0, creditLimit:2000, notes:"" },
+];
+
+const WALLET_ICONS = ["💵","💴","💶","💷","💳","🏦","📱","💰","🪙","💸","🎴","🔑"];
+const WALLET_TYPES = [
+  { v:"cash",   l:"Cash" },
+  { v:"debit",  l:"Debit Card" },
+  { v:"credit", l:"Credit Card" },
+  { v:"travel", l:"Travel Card (e.g. Wise, Revolut)" },
+  { v:"digital",l:"Digital Wallet (e.g. GoPay, Apple Pay)" },
+];
+
+// ─── Tiny chart component (no recharts needed) ────────────────
+function MiniBar({ data, palette, height=80 }) {
+  if (!data || data.length === 0) return null;
+  const max = Math.max(...data.map(d => d.value), 1);
+  return (
+    <div style={{ display:"flex", alignItems:"flex-end", gap:4, height, paddingTop:4 }}>
+      {data.map((d, i) => (
+        <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:3 }}>
+          <div style={{ width:"100%", height: Math.max(4, Math.round((d.value/max)*height)), background:d.color||palette.primary, borderRadius:"4px 4px 0 0", transition:"height 0.3s", minHeight: d.value>0?4:0 }}/>
+          <span style={{ fontSize:9, color:palette.muted, fontWeight:600, textAlign:"center", lineHeight:1.1, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis", maxWidth:"100%" }}>{d.label}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function DonutChart({ data, size=100, palette }) {
+  if (!data || data.length === 0) return null;
+  const total = data.reduce((s,d)=>s+d.value,0);
+  if (total === 0) return null;
+  let offset = 0;
+  const r = 35, cx = 50, cy = 50, circ = 2*Math.PI*r;
+  const slices = data.filter(d=>d.value>0).map(d => {
+    const pct = d.value/total;
+    const slice = { offset, pct, color:d.color, label:d.label, value:d.value };
+    offset += pct;
+    return slice;
   });
-  const [ne, setNe] = useState(blank());
+  return (
+    <svg width={size} height={size} viewBox="0 0 100 100">
+      {slices.map((s,i) => (
+        <circle key={i} r={r} cx={cx} cy={cy} fill="none" stroke={s.color} strokeWidth={18}
+          strokeDasharray={`${s.pct*circ} ${circ}`}
+          strokeDashoffset={-s.offset*circ}
+          transform="rotate(-90 50 50)" style={{ transition:"stroke-dasharray 0.4s" }}/>
+      ))}
+      <circle r={22} cx={cx} cy={cy} fill="#fff"/>
+    </svg>
+  );
+}
 
-  const save = () => {
-    if (!ne.description.trim() || !ne.amount) return;
-    const exp = { ...ne, id:editId||uid(), amount:parseFloat(ne.amount) };
-    onUpdate("expenses", editId ? expenses.map(e=>e.id===editId?exp:e) : [...expenses,exp]);
-    setEditId(null); setShowAdd(false); setNe(blank());
+function SparkLine({ values, color, height=32 }) {
+  if (!values || values.length < 2) return null;
+  const max = Math.max(...values, 1);
+  const w = 120, h = height;
+  const pts = values.map((v,i) => `${(i/(values.length-1))*w},${h - (v/max)*h}`).join(" ");
+  return (
+    <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} style={{ overflow:"visible" }}>
+      <polyline points={pts} fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+      <circle cx={(values.length-1)/(values.length-1)*w} cy={h-(values[values.length-1]/max)*h} r={3} fill={color}/>
+    </svg>
+  );
+}
+
+// ─── Helpers ──────────────────────────────────────────────────
+const fmtMoney = (n, currency) => {
+  const num = parseFloat(n)||0;
+  return `${currency||""} ${num.toLocaleString(undefined,{minimumFractionDigits:0,maximumFractionDigits:0})}`;
+};
+const fmtMoneyFull = (n, currency) => {
+  const num = parseFloat(n)||0;
+  return `${currency||""} ${num.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`;
+};
+
+// ─── Main FinancesView ────────────────────────────────────────
+function FinancesView({ trip, palette, onUpdate }) {
+  const [tab, setTab]           = useState("overview");   // overview | transactions | wallets | analytics
+  const [showAddExp, setShowAddExp] = useState(false);
+  const [showAddWallet, setShowAddWallet] = useState(false);
+  const [editExpId, setEditExpId]   = useState(null);
+  const [editWalletId, setEditWalletId] = useState(null);
+  const [delExpId, setDelExpId]     = useState(null);
+  const [delWalletId, setDelWalletId] = useState(null);
+  const [showAddCat, setShowAddCat] = useState(false);
+
+  // Search/filter for transactions
+  const [search, setSearch]         = useState("");
+  const [filterCat, setFilterCat]   = useState("all");
+  const [filterWallet, setFilterWallet] = useState("all");
+  const [sortBy, setSortBy]         = useState("date_desc");
+
+  // Data from trip — with defaults
+  const expenses   = trip.expenses   || [];
+  const wallets    = trip.wallets    || DEFAULT_WALLETS.map(w=>({...w,id:uid()}));
+  const categories = trip.finCats    || DEFAULT_CATEGORIES;
+  const baseCurrency = trip.baseCurrency || "USD";
+  const budget     = trip.budget     || { amount:"", currency:baseCurrency };
+
+  // Ensure wallets exist on first load
+  useEffect(()=>{
+    if (!(trip.wallets)) onUpdate("wallets", DEFAULT_WALLETS.map(w=>({...w,id:uid()})));
+    if (!(trip.finCats)) onUpdate("finCats", DEFAULT_CATEGORIES);
+  },[]);
+
+  // ── blank forms ──
+  const blankExp = () => ({
+    date: new Date().toISOString().split("T")[0],
+    time: new Date().toTimeString().slice(0,5),
+    description:"", categoryId:"food", walletId: wallets[0]?.id||"",
+    amount:"", currency: baseCurrency,
+    convertedAmount:"", convertedCurrency: baseCurrency,
+    location:"", notes:"", receiptData:null
+  });
+  const blankWallet = () => ({
+    name:"", icon:"💵", type:"cash", currency: baseCurrency,
+    balance:"", creditLimit:"", notes:""
+  });
+
+  const [ne, setNe] = useState(blankExp());
+  const [nw, setNw] = useState(blankWallet());
+  const [newCatName, setNewCatName] = useState("");
+  const [newCatEmoji, setNewCatEmoji] = useState("📍");
+
+  // ── Receipt upload ──
+  const receiptRef = useRef();
+  const readReceipt = (file) => new Promise(res=>{const r=new FileReader();r.onload=e=>res({name:file.name,type:file.type,data:e.target.result});r.readAsDataURL(file);});
+
+  // ── Computed analytics ──
+  const totalSpent = expenses.reduce((s,e)=>s+(parseFloat(e.convertedAmount||e.amount)||0),0);
+  const budgetAmt  = parseFloat(budget.amount)||0;
+  const remaining  = budgetAmt - totalSpent;
+  const tripDays   = nightsBetween(trip.startDate,trip.endDate)||1;
+  const expDays    = [...new Set(expenses.map(e=>e.date))].length||1;
+  const dailyAvg   = totalSpent/expDays;
+
+  // By category
+  const byCat = categories.map(cat=>{
+    const total = expenses.filter(e=>e.categoryId===cat.id).reduce((s,e)=>s+(parseFloat(e.convertedAmount||e.amount)||0),0);
+    return {...cat, total};
+  }).filter(c=>c.total>0).sort((a,b)=>b.total-a.total);
+
+  // By wallet
+  const byWallet = wallets.map(w=>{
+    const txns = expenses.filter(e=>e.walletId===w.id);
+    const spent = txns.reduce((s,e)=>s+(parseFloat(e.convertedAmount||e.amount)||0),0);
+    return {...w, spent, txnCount:txns.length};
+  });
+
+  // Spending over time (last 14 days buckets)
+  const last14 = Array.from({length:14},(_,i)=>{
+    const d = new Date(); d.setDate(d.getDate()-13+i);
+    return d.toISOString().split("T")[0];
+  });
+  const byDay = last14.map(d=>({
+    label: new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"numeric",day:"numeric"}),
+    value: expenses.filter(e=>e.date===d).reduce((s,e)=>s+(parseFloat(e.convertedAmount||e.amount)||0),0)
+  }));
+
+  // Filtered/sorted transactions
+  const filtered = expenses
+    .filter(e=>{
+      if (filterCat!=="all" && e.categoryId!==filterCat) return false;
+      if (filterWallet!=="all" && e.walletId!==filterWallet) return false;
+      if (search && !e.description.toLowerCase().includes(search.toLowerCase()) && !(e.notes||"").toLowerCase().includes(search.toLowerCase())) return false;
+      return true;
+    })
+    .sort((a,b)=>{
+      if (sortBy==="date_desc") return (b.date+b.time).localeCompare(a.date+a.time);
+      if (sortBy==="date_asc")  return (a.date+a.time).localeCompare(b.date+b.time);
+      if (sortBy==="amount_desc") return (parseFloat(b.amount)||0)-(parseFloat(a.amount)||0);
+      if (sortBy==="amount_asc")  return (parseFloat(a.amount)||0)-(parseFloat(b.amount)||0);
+      return 0;
+    });
+
+  // ── CRUD ──
+  const saveExpense = async () => {
+    if (!ne.description.trim()||!ne.amount) return;
+    const exp = {
+      ...ne, id:editExpId||uid(),
+      amount:parseFloat(ne.amount),
+      convertedAmount: parseFloat(ne.convertedAmount||ne.amount),
+      convertedCurrency: ne.convertedCurrency||baseCurrency,
+    };
+    if (editExpId) { onUpdate("expenses",expenses.map(e=>e.id===editExpId?exp:e)); setEditExpId(null); }
+    else           { onUpdate("expenses",[...expenses,exp]); }
+    setShowAddExp(false); setNe(blankExp());
+    // Update wallet balance for cash/debit
+    const wallet = wallets.find(w=>w.id===exp.walletId);
+    if (wallet && (wallet.type==="cash"||wallet.type==="debit")) {
+      const oldExp = editExpId ? expenses.find(e=>e.id===editExpId) : null;
+      const oldAmt = oldExp ? (parseFloat(oldExp.amount)||0) : 0;
+      const newBal = (parseFloat(wallet.balance)||0) - (parseFloat(exp.amount)||0) + oldAmt;
+      onUpdate("wallets", wallets.map(w=>w.id===wallet.id?{...w,balance:Math.max(0,newBal)}:w));
+    }
   };
-  const startEdit = (e) => { setNe({...e,amount:String(e.amount)}); setEditId(e.id); setShowAdd(true); };
-  const doDelete  = (id) => { onUpdate("expenses",expenses.filter(e=>e.id!==id)); setDelId(null); };
 
-  const filtered = filterCat==="all" ? expenses : expenses.filter(e=>e.category===filterCat);
+  const deleteExpense = (id) => {
+    const exp = expenses.find(e=>e.id===id);
+    onUpdate("expenses",expenses.filter(e=>e.id!==id));
+    // Restore wallet balance
+    if (exp) {
+      const wallet = wallets.find(w=>w.id===exp.walletId);
+      if (wallet && (wallet.type==="cash"||wallet.type==="debit")) {
+        onUpdate("wallets",wallets.map(w=>w.id===wallet.id?{...w,balance:(parseFloat(w.balance)||0)+(parseFloat(exp.amount)||0)}:w));
+      }
+    }
+    setDelExpId(null);
+  };
 
-  // Totals per currency
-  const totals = expenses.reduce((acc,e)=>{ acc[e.currency]=(acc[e.currency]||0)+(parseFloat(e.amount)||0); return acc; },{});
+  const saveWallet = () => {
+    if (!nw.name.trim()) return;
+    const w = {...nw, id:editWalletId||uid(), balance:parseFloat(nw.balance)||0, creditLimit:parseFloat(nw.creditLimit)||0};
+    if (editWalletId) { onUpdate("wallets",wallets.map(x=>x.id===editWalletId?w:x)); setEditWalletId(null); }
+    else              { onUpdate("wallets",[...wallets,w]); }
+    setShowAddWallet(false); setNw(blankWallet());
+  };
 
-  // Export
+  const deleteWallet = (id) => { onUpdate("wallets",wallets.filter(w=>w.id!==id)); setDelWalletId(null); };
+
+  const addCategory = () => {
+    if (!newCatName.trim()) return;
+    const cat = { id:"c_"+uid(), label:newCatName.trim(), emoji:newCatEmoji, color:palette.primary };
+    onUpdate("finCats",[...categories,cat]);
+    setNewCatName(""); setNewCatEmoji("📍"); setShowAddCat(false);
+  };
+
+  // ── Export ──
   const exportCSV = () => {
-    const hdr = ["Date","Description","Category","Amount","Currency","City","Paid By","Notes"];
-    const rows = expenses.map(e=>[e.date,e.description,EXPENSE_CATS.find(c=>c.id===e.category)?.label||e.category,e.amount,e.currency,e.city||"",e.paidBy||"",e.notes||""]);
-    const csv = [hdr,...rows].map(r=>r.map(v=>`"${String(v).replace(/"/g,'""')}"`).join(",")).join("\n");
-    const a=document.createElement("a"); a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv); a.download=`${trip.tripName}-finances.csv`; a.click();
+    const hdr = ["Date","Time","Description","Category","Wallet","Amount","Currency","Converted","Base Currency","Location","Notes"];
+    const rows = expenses.map(e=>{
+      const cat=categories.find(c=>c.id===e.categoryId); const w=wallets.find(w=>w.id===e.walletId);
+      return [e.date,e.time||"",e.description,cat?.label||"",w?.name||"",e.amount,e.currency,e.convertedAmount||e.amount,baseCurrency,e.location||"",e.notes||""];
+    });
+    const csv=[hdr,...rows].map(r=>r.map(v=>`"${String(v||"").replace(/"/g,'""')}"`).join(",")).join("\n");
+    const a=document.createElement("a");a.href="data:text/csv;charset=utf-8,"+encodeURIComponent(csv);a.download=`${trip.tripName}-expenses.csv`;a.click();
   };
+
   const exportXLSX = () => {
-    const ws = XLSX.utils.json_to_sheet(expenses.map(e=>({
-      Date:e.date, Description:e.description,
-      Category:EXPENSE_CATS.find(c=>c.id===e.category)?.label||e.category,
-      Amount:parseFloat(e.amount)||0, Currency:e.currency,
-      City:e.city||"", "Paid By":e.paidBy||"", Notes:e.notes||""
-    })));
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb,ws,"Expenses");
-    const ws2 = XLSX.utils.json_to_sheet([{ Trip:trip.tripName, "Budget Amount":budget.amount||"", "Budget Currency":budget.currency }]);
-    XLSX.utils.book_append_sheet(wb,ws2,"Budget");
+    const ws=XLSX.utils.json_to_sheet(expenses.map(e=>{
+      const cat=categories.find(c=>c.id===e.categoryId);const w=wallets.find(w=>w.id===e.walletId);
+      return {Date:e.date,Time:e.time||"",Description:e.description,Category:cat?.label||"",Wallet:w?.name||"",Amount:parseFloat(e.amount)||0,Currency:e.currency,"Converted Amount":parseFloat(e.convertedAmount||e.amount)||0,"Base Currency":baseCurrency,Location:e.location||"",Notes:e.notes||""};
+    }));
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,"Expenses");
+    const ws2=XLSX.utils.json_to_sheet(wallets.map(w=>({Name:w.name,Type:w.type,Currency:w.currency,Balance:w.balance,CreditLimit:w.creditLimit||0,Notes:w.notes||""})));
+    XLSX.utils.book_append_sheet(wb,ws2,"Wallets");
     XLSX.writeFile(wb,`${trip.tripName}-finances.xlsx`);
   };
+
   const exportJSON = () => {
-    const blob = JSON.stringify({ trip:trip.tripName, exportedAt:new Date().toISOString(), budget, expenses },null,2);
-    const a=document.createElement("a"); a.href="data:application/json;charset=utf-8,"+encodeURIComponent(blob); a.download=`${trip.tripName}-finances.json`; a.click();
+    const data={trip:trip.tripName,exportedAt:new Date().toISOString(),baseCurrency,budget,wallets:wallets.map(({receiptData,...w})=>w),categories,expenses:expenses.map(({receiptData,...e})=>e)};
+    const a=document.createElement("a");a.href="data:application/json;charset=utf-8,"+encodeURIComponent(JSON.stringify(data,null,2));a.download=`${trip.tripName}-finances.json`;a.click();
   };
 
-  return (
-    <div style={{ padding:"24px 20px 40px" }}>
-      {delId && <Confirm message="Delete this expense?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
+  // ─── Sub-sections ──────────────────────────────────────────
 
-      <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20 }}>
-        <div>
-          <h2 style={{ fontFamily:"'Playfair Display',Georgia,serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px" }}>Finances</h2>
-          <p style={{ color:palette.muted,fontSize:13,margin:0 }}>{expenses.length} expense{expenses.length!==1?"s":""} tracked</p>
-        </div>
-        <button onClick={()=>{ setNe(blank()); setEditId(null); setShowAdd(v=>!v); }}
-          style={{ display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer" }}>
-          <Plus size={15}/>Add
-        </button>
-      </div>
-
-      {/* Budget card */}
-      <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14 }}>
-        <div style={{ display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom: showBudget?12:0 }}>
+  const OverviewSection = () => (
+    <div>
+      {/* Budget progress */}
+      <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:12}}>
           <div>
-            <p style={{ fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 4px" }}>Trip Budget</p>
-            {budget.amount
-              ? <p style={{ fontSize:22,fontWeight:800,color:palette.text,margin:0 }}>{budget.currency} {parseFloat(budget.amount).toLocaleString()}</p>
-              : <p style={{ fontSize:14,color:palette.muted,margin:0 }}>No budget set yet</p>
+            <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 4px"}}>Trip Budget</p>
+            {budgetAmt>0
+              ? <p style={{fontSize:22,fontWeight:800,color:palette.text,margin:0}}>{fmtMoney(budgetAmt,budget.currency)}</p>
+              : <p style={{fontSize:14,color:palette.muted,margin:0}}>No budget set</p>
             }
           </div>
-          <button onClick={()=>setShowBudget(v=>!v)}
-            style={{ background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"7px 14px",fontSize:12,fontWeight:700,cursor:"pointer" }}>
-            {showBudget?"Done":"Set Budget"}
-          </button>
+          <button onClick={()=>{ setTab("analytics"); }}
+            style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"6px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>Analytics →</button>
         </div>
-        {showBudget && (
-          <div style={{ display:"flex",gap:8 }}>
-            <div style={{ flex:1 }}><Inp label="" value={String(budget.amount||"")} type="number" placeholder="Amount" onChange={v=>onUpdate("budget",{...budget,amount:v})} sx={{marginBottom:0}}/></div>
-            <div style={{ width:100 }}><Inp label="" value={budget.currency} opts={CURRENCIES} onChange={v=>onUpdate("budget",{...budget,currency:v})} sx={{marginBottom:0}}/></div>
-          </div>
-        )}
-        {/* Progress bar */}
-        {budget.amount && Object.entries(totals).map(([cur,spent]) => {
-          if (cur !== budget.currency) return null;
-          const pct = Math.min(100,Math.round((spent/parseFloat(budget.amount))*100));
-          const over = spent > parseFloat(budget.amount);
-          return (
-            <div key={cur} style={{ marginTop:12 }}>
-              <div style={{ display:"flex",justifyContent:"space-between",fontSize:12,marginBottom:5 }}>
-                <span style={{ color:palette.muted }}>Spent: <strong style={{ color:over?"#E05C5C":palette.text }}>{cur} {spent.toLocaleString(undefined,{maximumFractionDigits:0})}</strong></span>
-                <span style={{ color:over?"#E05C5C":palette.muted,fontWeight:700 }}>{over?"Over budget!":`${pct}% used`}</span>
-              </div>
-              <div style={{ height:8,background:"#F5F0F2",borderRadius:99,overflow:"hidden" }}>
-                <div style={{ height:"100%",width:`${pct}%`,background:over?"#E05C5C":`linear-gradient(90deg,${palette.primary},${palette.accent})`,borderRadius:99,transition:"width 0.4s" }}/>
-              </div>
+        {/* Set budget inline */}
+        <div style={{display:"flex",gap:8,marginBottom:budgetAmt>0?12:0}}>
+          <input type="number" value={budget.amount||""} onChange={e=>onUpdate("budget",{...budget,amount:e.target.value})} placeholder="Set budget amount"
+            style={{flex:1,border:`1px solid ${palette.border}`,borderRadius:10,padding:"8px 10px",fontSize:13,fontFamily:"inherit",outline:"none",background:"#FAF8F9",color:palette.text}}/>
+          <select value={budget.currency||baseCurrency} onChange={e=>onUpdate("budget",{...budget,currency:e.target.value})}
+            style={{width:80,border:`1px solid ${palette.border}`,borderRadius:10,padding:"8px 8px",fontSize:12,fontFamily:"inherit",outline:"none",background:"#FAF8F9",color:palette.text}}>
+            {CURRENCIES_ALL.map(c=><option key={c}>{c}</option>)}
+          </select>
+        </div>
+        {budgetAmt>0&&(()=>{
+          const pct=Math.min(100,Math.round((totalSpent/budgetAmt)*100));
+          const over=totalSpent>budgetAmt;
+          return <>
+            <div style={{height:10,background:"#F5F0F2",borderRadius:99,overflow:"hidden",marginBottom:8}}>
+              <div style={{height:"100%",width:`${pct}%`,background:over?"#E05C5C":`linear-gradient(90deg,${palette.primary},${palette.accent})`,borderRadius:99,transition:"width 0.4s"}}/>
             </div>
-          );
-        })}
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:12}}>
+              <span style={{color:palette.muted}}>Spent: <strong style={{color:over?"#E05C5C":palette.text}}>{fmtMoney(totalSpent,budget.currency)}</strong></span>
+              <span style={{color:over?"#E05C5C":palette.muted,fontWeight:700}}>{over?"Over budget!":`${pct}% used`}</span>
+            </div>
+          </>;
+        })()}
       </div>
 
-      {/* Total pills */}
-      {Object.keys(totals).length > 0 && (
-        <div style={{ display:"flex",gap:8,overflowX:"auto",marginBottom:14 }}>
-          {Object.entries(totals).map(([cur,amt]) => (
-            <div key={cur} style={{ background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"10px 16px",flexShrink:0 }}>
-              <p style={{ fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px",textTransform:"uppercase" }}>{cur}</p>
-              <p style={{ fontSize:18,fontWeight:800,color:palette.primary,margin:0 }}>{amt.toLocaleString(undefined,{maximumFractionDigits:0})}</p>
-            </div>
-          ))}
-        </div>
-      )}
+      {/* Stats grid */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:14}}>
+        {[
+          ["💸","Total Spent",fmtMoney(totalSpent,baseCurrency)],
+          ["📅","Daily Avg",fmtMoney(dailyAvg,baseCurrency)],
+          ["💰","Remaining",budgetAmt>0?fmtMoney(Math.max(0,remaining),budget.currency):"—"],
+          ["🧾","Transactions",expenses.length],
+        ].map(([icon,label,val])=>(
+          <div key={label} style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"12px 14px"}}>
+            <div style={{fontSize:20,marginBottom:3}}>{icon}</div>
+            <div style={{fontSize:15,fontWeight:800,color:palette.text,lineHeight:1.2}}>{val}</div>
+            <div style={{fontSize:11,color:palette.muted,fontWeight:600,marginTop:2}}>{label}</div>
+          </div>
+        ))}
+      </div>
 
-      {/* By category breakdown */}
-      {expenses.length > 0 && (
-        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14 }}>
-          <p style={{ fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 12px" }}>By Category</p>
-          {EXPENSE_CATS.map(cat => {
-            const items = expenses.filter(e=>e.category===cat.id);
-            if (!items.length) return null;
-            const byCur = items.reduce((acc,e)=>{ acc[e.currency]=(acc[e.currency]||0)+(parseFloat(e.amount)||0); return acc; },{});
+      {/* Top categories */}
+      {byCat.length>0&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14}}>
+          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 12px"}}>Top Categories</p>
+          {byCat.slice(0,5).map(cat=>{
+            const pct=totalSpent>0?Math.round((cat.total/totalSpent)*100):0;
             return (
-              <div key={cat.id} style={{ display:"flex",justifyContent:"space-between",alignItems:"center",padding:"7px 0",borderBottom:`1px solid ${palette.border}` }}>
-                <span style={{ fontSize:13,color:palette.text }}>{cat.emoji} {cat.label}</span>
-                <span style={{ fontSize:13,fontWeight:700,color:palette.text }}>
-                  {Object.entries(byCur).map(([c,a])=>`${c} ${a.toLocaleString(undefined,{maximumFractionDigits:0})}`).join(" · ")}
-                </span>
+              <div key={cat.id} style={{marginBottom:10}}>
+                <div style={{display:"flex",justifyContent:"space-between",marginBottom:4}}>
+                  <span style={{fontSize:13,color:palette.text}}>{cat.emoji} {cat.label}</span>
+                  <span style={{fontSize:13,fontWeight:700,color:palette.text}}>{fmtMoney(cat.total,baseCurrency)} <span style={{color:palette.muted,fontWeight:400}}>({pct}%)</span></span>
+                </div>
+                <div style={{height:6,background:"#F5F0F2",borderRadius:99,overflow:"hidden"}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:cat.color||palette.primary,borderRadius:99,transition:"width 0.4s"}}/>
+                </div>
               </div>
             );
           })}
         </div>
       )}
 
+      {/* Wallet summary */}
+      <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:0}}>Wallets</p>
+          <button onClick={()=>setTab("wallets")} style={{background:"none",border:"none",color:palette.primary,fontSize:12,fontWeight:700,cursor:"pointer"}}>Manage →</button>
+        </div>
+        {wallets.map(w=>{
+          const wData=byWallet.find(x=>x.id===w.id)||{spent:0,txnCount:0};
+          const isCredit=w.type==="credit";
+          const outstanding=isCredit?wData.spent:0;
+          const availableCredit=isCredit?(parseFloat(w.creditLimit)||0)-outstanding:0;
+          return (
+            <div key={w.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${palette.border}`}}>
+              <div style={{display:"flex",alignItems:"center",gap:10}}>
+                <span style={{fontSize:22}}>{w.icon}</span>
+                <div>
+                  <p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{w.name}</p>
+                  <p style={{fontSize:11,color:palette.muted,margin:0}}>{wData.txnCount} transactions</p>
+                </div>
+              </div>
+              <div style={{textAlign:"right"}}>
+                {isCredit
+                  ? <><p style={{fontSize:13,fontWeight:700,color:"#E05C5C",margin:0}}>{fmtMoney(outstanding,w.currency)} due</p><p style={{fontSize:11,color:palette.muted,margin:0}}>{fmtMoney(availableCredit,w.currency)} avail.</p></>
+                  : <><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtMoney(w.balance,w.currency)}</p><p style={{fontSize:11,color:palette.muted,margin:0}}>balance</p></>
+                }
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Recent transactions */}
+      {expenses.length>0&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px"}}>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+            <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:0}}>Recent Transactions</p>
+            <button onClick={()=>setTab("transactions")} style={{background:"none",border:"none",color:palette.primary,fontSize:12,fontWeight:700,cursor:"pointer"}}>All →</button>
+          </div>
+          {[...expenses].sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time)).slice(0,4).map(e=>{
+            const cat=categories.find(c=>c.id===e.categoryId)||{emoji:"📦",label:"Other",color:"#9A8F92"};
+            const w=wallets.find(w=>w.id===e.walletId);
+            return (
+              <div key={e.id} style={{display:"flex",alignItems:"center",gap:10,padding:"8px 0",borderBottom:`1px solid ${palette.border}`}}>
+                <div style={{width:36,height:36,borderRadius:10,background:cat.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>{cat.emoji}</div>
+                <div style={{flex:1,minWidth:0}}>
+                  <p style={{fontSize:13,fontWeight:600,color:palette.text,margin:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.description}</p>
+                  <p style={{fontSize:11,color:palette.muted,margin:0}}>{fmtDateShort(e.date)}{w?" · "+w.icon+" "+w.name:""}</p>
+                </div>
+                <p style={{fontSize:14,fontWeight:800,color:palette.text,margin:0,flexShrink:0}}>{fmtMoney(e.amount,e.currency)}</p>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {expenses.length===0&&(
+        <div style={{textAlign:"center",padding:"40px 0",color:palette.muted}}>
+          <div style={{fontSize:40,marginBottom:12}}>💸</div>
+          <p style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 6px"}}>No expenses yet</p>
+          <p style={{fontSize:13}}>Tap the + button to log your first expense</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const TransactionsSection = () => (
+    <div>
+      {/* Search + sort */}
+      <div style={{display:"flex",alignItems:"center",background:"#fff",border:`1px solid ${palette.border}`,borderRadius:12,padding:"0 12px",marginBottom:8}}>
+        <Search size={14} color={palette.muted}/>
+        <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search transactions…"
+          style={{flex:1,border:"none",outline:"none",padding:"10px 8px",fontSize:13,fontFamily:"inherit",color:palette.text,background:"transparent"}}/>
+        {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><X size={14} color={palette.muted}/></button>}
+      </div>
+      <div style={{display:"flex",gap:6,overflowX:"auto",marginBottom:8}}>
+        <select value={filterCat} onChange={e=>setFilterCat(e.target.value)}
+          style={{flexShrink:0,border:`1px solid ${palette.border}`,borderRadius:10,padding:"6px 10px",fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff",color:palette.text}}>
+          <option value="all">All categories</option>
+          {categories.map(c=><option key={c.id} value={c.id}>{c.emoji} {c.label}</option>)}
+        </select>
+        <select value={filterWallet} onChange={e=>setFilterWallet(e.target.value)}
+          style={{flexShrink:0,border:`1px solid ${palette.border}`,borderRadius:10,padding:"6px 10px",fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff",color:palette.text}}>
+          <option value="all">All wallets</option>
+          {wallets.map(w=><option key={w.id} value={w.id}>{w.icon} {w.name}</option>)}
+        </select>
+        <select value={sortBy} onChange={e=>setSortBy(e.target.value)}
+          style={{flexShrink:0,border:`1px solid ${palette.border}`,borderRadius:10,padding:"6px 10px",fontSize:12,fontFamily:"inherit",outline:"none",background:"#fff",color:palette.text}}>
+          <option value="date_desc">Newest first</option>
+          <option value="date_asc">Oldest first</option>
+          <option value="amount_desc">Highest amount</option>
+          <option value="amount_asc">Lowest amount</option>
+        </select>
+      </div>
+
+      <p style={{fontSize:12,color:palette.muted,margin:"0 0 10px"}}>{filtered.length} transaction{filtered.length!==1?"s":""}</p>
+
+      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:palette.muted}}><div style={{fontSize:32,marginBottom:8}}>🔍</div><p>No matching transactions</p></div>}
+
+      {filtered.map(e=>{
+        const cat=categories.find(c=>c.id===e.categoryId)||{emoji:"📦",label:"Other",color:"#9A8F92"};
+        const w=wallets.find(w=>w.id===e.walletId);
+        return (
+          <div key={e.id} style={{background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,padding:"12px 14px",marginBottom:8}}>
+            <div style={{display:"flex",alignItems:"flex-start",gap:10}}>
+              <div style={{width:40,height:40,borderRadius:12,background:cat.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0}}>{cat.emoji}</div>
+              <div style={{flex:1,minWidth:0}}>
+                <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:14,fontWeight:700,color:palette.text,margin:"0 0 2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.description}</p>
+                    <div style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+                      <span style={{fontSize:11,background:cat.color+"22",color:cat.color,padding:"1px 7px",borderRadius:99,fontWeight:700}}>{cat.label}</span>
+                      {w&&<span style={{fontSize:11,color:palette.muted}}>{w.icon} {w.name}</span>}
+                      <span style={{fontSize:11,color:palette.muted}}>{e.date}{e.time?" "+e.time:""}</span>
+                      {e.location&&<span style={{fontSize:11,color:palette.muted}}><MapPin size={9} style={{verticalAlign:-1}}/> {e.location}</span>}
+                    </div>
+                    {e.notes&&<p style={{fontSize:11,color:palette.muted,margin:"3px 0 0"}}>{e.notes}</p>}
+                  </div>
+                  <div style={{textAlign:"right",marginLeft:12,flexShrink:0}}>
+                    <p style={{fontSize:16,fontWeight:800,color:palette.text,margin:"0 0 4px"}}>{fmtMoney(e.amount,e.currency)}</p>
+                    {e.currency!==baseCurrency&&e.convertedAmount&&<p style={{fontSize:11,color:palette.muted,margin:0}}>≈ {fmtMoney(e.convertedAmount,baseCurrency)}</p>}
+                    <div style={{display:"flex",gap:4,justifyContent:"flex-end",marginTop:4}}>
+                      <button onClick={()=>{ setNe({...e,amount:String(e.amount),convertedAmount:String(e.convertedAmount||e.amount)}); setEditExpId(e.id); setShowAddExp(true); setTab("transactions"); }}
+                        style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:7,padding:"3px 8px",fontSize:11,cursor:"pointer"}}><Edit3 size={10}/></button>
+                      <button onClick={()=>setDelExpId(e.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"3px 8px",fontSize:11,cursor:"pointer"}}><Trash2 size={10}/></button>
+                    </div>
+                  </div>
+                </div>
+                {e.receiptData&&<button onClick={()=>{ const a=document.createElement("a");a.href=e.receiptData.data;a.download=e.receiptData.name;a.click(); }}
+                  style={{marginTop:6,display:"inline-flex",alignItems:"center",gap:4,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:7,padding:"4px 10px",fontSize:11,fontWeight:600,cursor:"pointer"}}>
+                  🧾 {e.receiptData.name}
+                </button>}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+
       {/* Export */}
-      {expenses.length > 0 && (
-        <div style={{ background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginBottom:14 }}>
-          <p style={{ fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px" }}>Export Data</p>
-          <div style={{ display:"flex",gap:8,marginBottom:8 }}>
-            <button onClick={exportCSV}  style={{ flex:1,background:"#DFF0E1",color:"#3A6B42",border:"none",borderRadius:10,padding:"11px 0",fontSize:12,fontWeight:700,cursor:"pointer" }}>📄 CSV</button>
-            <button onClick={exportXLSX} style={{ flex:1,background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:10,padding:"11px 0",fontSize:12,fontWeight:700,cursor:"pointer" }}>📊 Excel</button>
-            <button onClick={exportJSON} style={{ flex:1,background:"#EEE8F8",color:"#5B4C8A",border:"none",borderRadius:10,padding:"11px 0",fontSize:12,fontWeight:700,cursor:"pointer" }}>🔗 JSON</button>
-          </div>
-          <p style={{ fontSize:11,color:palette.muted,margin:0,lineHeight:1.5 }}>CSV/Excel → Notion, Google Sheets, Excel. JSON → personal finance apps & APIs.</p>
-        </div>
-      )}
-
-      {/* Add / edit form */}
-      {showAdd && (
-        <div style={{ background:"#fff",borderRadius:20,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 6px 30px rgba(0,0,0,0.08)" }}>
-          <h3 style={{ fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px" }}>{editId?"Edit":"New"} Expense</h3>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr 1fr",gap:8 }}>
-            <Inp label="Date" type="date" value={ne.date} onChange={v=>setNe(p=>({...p,date:v}))}/>
-            {cities.length>0
-              ? <Inp label="City" value={ne.city} opts={["(any)",...cities]} onChange={v=>setNe(p=>({...p,city:v==="(any)"?"":v}))}/>
-              : <Inp label="City" value={ne.city} placeholder="City" onChange={v=>setNe(p=>({...p,city:v}))}/>}
-          </div>
-          <Inp label="Description" value={ne.description} placeholder="What did you spend on?" onChange={v=>setNe(p=>({...p,description:v}))}/>
-          <Inp label="Category" value={ne.category} opts={EXPENSE_CATS.map(c=>({v:c.id,l:c.emoji+" "+c.label}))} onChange={v=>setNe(p=>({...p,category:v}))}/>
-          <div style={{ display:"grid",gridTemplateColumns:"1fr auto",gap:8 }}>
-            <Inp label="Amount" type="number" value={ne.amount} placeholder="0.00" onChange={v=>setNe(p=>({...p,amount:v}))}/>
-            <Inp label="Currency" value={ne.currency} opts={CURRENCIES} onChange={v=>setNe(p=>({...p,currency:v}))}/>
-          </div>
-          <Inp label="Paid By" value={ne.paidBy} placeholder="Your name / split" onChange={v=>setNe(p=>({...p,paidBy:v}))}/>
-          <Inp label="Notes" value={ne.notes} placeholder="Extra details…" onChange={v=>setNe(p=>({...p,notes:v}))} multi rows={2}/>
-          <div style={{ display:"flex",gap:8 }}>
-            <button onClick={save} disabled={!ne.description.trim()||!ne.amount}
-              style={{ flex:1,background:(ne.description.trim()&&ne.amount)?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:(ne.description.trim()&&ne.amount)?"pointer":"not-allowed" }}>
-              {editId?"Save Changes":"Add Expense"}
-            </button>
-            <button onClick={()=>{ setShowAdd(false); setEditId(null); }}
-              style={{ flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer" }}>Cancel</button>
+      {expenses.length>0&&(
+        <div style={{background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,padding:"12px 14px",marginTop:8}}>
+          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Export</p>
+          <div style={{display:"flex",gap:8}}>
+            <button onClick={exportCSV}  style={{flex:1,background:"#DFF0E1",color:"#3A6B42",border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>📄 CSV</button>
+            <button onClick={exportXLSX} style={{flex:1,background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Excel</button>
+            <button onClick={exportJSON} style={{flex:1,background:"#EEE8F8",color:"#5B4C8A",border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔗 JSON</button>
           </div>
         </div>
       )}
-
-      {/* Filter tabs */}
-      <div style={{ display:"flex",gap:6,overflowX:"auto",marginBottom:12 }}>
-        <button onClick={()=>setFilterCat("all")} style={{ flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:filterCat==="all"?palette.primary:"#F5F0F2",color:filterCat==="all"?"#fff":palette.muted }}>All</button>
-        {EXPENSE_CATS.map(c => { if(!expenses.some(e=>e.category===c.id)) return null; return (
-          <button key={c.id} onClick={()=>setFilterCat(c.id)} style={{ flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:filterCat===c.id?palette.primary:"#F5F0F2",color:filterCat===c.id?"#fff":palette.muted }}>
-            {c.emoji} {c.label}
-          </button>
-        ); })}
-      </div>
-
-      {/* List */}
-      {filtered.length===0 && !showAdd && (
-        <div style={{ textAlign:"center",padding:"50px 0",color:palette.muted }}>
-          <div style={{ fontSize:40,marginBottom:12 }}>💸</div>
-          <p style={{ fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 6px" }}>No expenses yet</p>
-          <p style={{ fontSize:13 }}>Track every spend — export to Notion or your finance app when done</p>
-        </div>
-      )}
-      {filtered.map(e => {
-        const cat = EXPENSE_CATS.find(c=>c.id===e.category)||EXPENSE_CATS[6];
-        return (
-          <div key={e.id} style={{ background:"#fff",borderRadius:16,border:`1px solid ${palette.border}`,padding:"12px 16px",marginBottom:8,display:"flex",alignItems:"center",gap:12 }}>
-            <div style={{ width:40,height:40,borderRadius:12,background:palette.primaryLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,flexShrink:0 }}>{cat.emoji}</div>
-            <div style={{ flex:1,minWidth:0 }}>
-              <div style={{ display:"flex",justifyContent:"space-between",alignItems:"flex-start" }}>
-                <div style={{ flex:1,minWidth:0 }}>
-                  <p style={{ fontSize:13,fontWeight:700,color:palette.text,margin:"0 0 2px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap" }}>{e.description}</p>
-                  <div style={{ display:"flex",gap:6,alignItems:"center",flexWrap:"wrap" }}>
-                    <span style={{ fontSize:11,color:palette.muted }}>{fmtDateShort(e.date)}</span>
-                    {e.city&&<span style={{ fontSize:11,color:palette.muted }}>· {e.city}</span>}
-                    <span style={{ fontSize:10,background:"#F5F0F2",color:palette.muted,padding:"1px 7px",borderRadius:99,fontWeight:600 }}>{cat.label}</span>
-                    {e.paidBy&&<span style={{ fontSize:10,color:palette.muted }}>👤 {e.paidBy}</span>}
-                  </div>
-                  {e.notes&&<p style={{ fontSize:11,color:palette.muted,margin:"3px 0 0" }}>{e.notes}</p>}
-                </div>
-                <div style={{ textAlign:"right",marginLeft:12,flexShrink:0 }}>
-                  <p style={{ fontSize:15,fontWeight:800,color:palette.primary,margin:"0 0 5px" }}>{e.currency} {parseFloat(e.amount).toLocaleString(undefined,{maximumFractionDigits:2})}</p>
-                  <div style={{ display:"flex",gap:4,justifyContent:"flex-end" }}>
-                    <button onClick={()=>startEdit(e)} style={{ background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:7,padding:"3px 8px",fontSize:11,cursor:"pointer" }}><Edit3 size={10}/></button>
-                    <button onClick={()=>setDelId(e.id)} style={{ background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"3px 8px",fontSize:11,cursor:"pointer" }}><Trash2 size={10}/></button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
-}
 
-// ══════════════════════════════════════════════════════════════
-// RESTAURANTS VIEW — with photo upload + rating
-// ══════════════════════════════════════════════════════════════
-function RestaurantsView({ trip, palette, onUpdate }) {
-  const allCities=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];
-  const [city,setCity]=useState(allCities[0]||"");
-  const [search,setSearch]=useState("");
-  const [fSt,setFSt]=useState("all");
-  const [showAdd,setShowAdd]=useState(false);
-  const [showAddCity,setShowAddCity]=useState(false);
-  const [delId,setDelId]=useState(null);
-  const [expId,setExpId]=useState(null);
-  const [editId,setEditId]=useState(null);
-  const [nr,setNr]=useState({city:allCities[0]||"",name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",rating:0,myReview:"",files:[]});
-  const [ef,setEf]=useState({});
-
-  const switchCity=(c)=>{setCity(c);setNr(p=>({...p,city:c}));};
-  useEffect(()=>{const u=[...new Set(trip.restaurants.map(r=>r.city).filter(Boolean))];if(u.length>0&&!u.includes(city))switchCity(u[u.length-1]);},[trip.restaurants]);
-
-  const SO=["wishlist","chosen","visited","skipped"];
-  const cycle=(r)=>{const i=SO.indexOf(r.status);onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,status:SO[(i+1)%SO.length]}:x));};
-  const doDelete=(id)=>{onUpdate("restaurants",trip.restaurants.filter(x=>x.id!==id));setDelId(null);setExpId(null);};
-  const saveEdit=()=>{onUpdate("restaurants",trip.restaurants.map(x=>x.id===editId?{...x,...ef}:x));setEditId(null);};
-  const addR=()=>{
-    if(!nr.name.trim())return;
-    onUpdate("restaurants",[...trip.restaurants,{...nr,id:uid()}]);
-    setShowAdd(false);
-    setNr({city,name:"",cuisine:"",price:"¥¥",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",rating:0,myReview:"",files:[]});
-  };
-  const addCity=(name)=>{onUpdate("restaurants",[...trip.restaurants,{id:uid(),city:name,name:"",cuisine:"",price:"",mustTry:"",area:"",reservationRequired:"No",notes:"",status:"wishlist",rating:0,myReview:"",files:[]}]);setShowAddCity(false);};
-
-  const filtered=trip.restaurants.filter(r=>r.city===city&&r.name&&(fSt==="all"||r.status===fSt)&&(search===""||r.name.toLowerCase().includes(search.toLowerCase())||(r.cuisine||"").toLowerCase().includes(search.toLowerCase())));
-
-  return (
-    <div style={{padding:"20px 16px 40px"}}>
-      {delId&&<Confirm message="Remove this restaurant?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-      {showAddCity&&<CityDialog onOk={addCity} onNo={()=>setShowAddCity(false)} palette={palette}/>}
-
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Eats</h2>
-        <p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.restaurants.filter(r=>r.name&&r.status==="wishlist").length} wishlist · {trip.restaurants.filter(r=>r.name&&r.status==="visited").length} visited</p></div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add</button>
+  const WalletsSection = () => (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:14}}>
+        <p style={{fontSize:13,color:palette.muted,margin:0}}>{wallets.length} payment method{wallets.length!==1?"s":""}</p>
+        <button onClick={()=>{ setNw(blankWallet()); setEditWalletId(null); setShowAddWallet(true); }}
+          style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:"pointer"}}>
+          <Plus size={14}/>Add Wallet
+        </button>
       </div>
 
-      {/* City tabs */}
-      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:10,marginBottom:8}}>
-        {allCities.map(c=><button key={c} onClick={()=>switchCity(c)} style={{flexShrink:0,padding:"7px 16px",borderRadius:99,border:"none",fontSize:13,fontWeight:700,cursor:"pointer",background:city===c?palette.primary:palette.primaryLight,color:city===c?"#fff":palette.primary}}>{c}</button>)}
-        <button onClick={()=>setShowAddCity(true)} style={{flexShrink:0,padding:"7px 14px",borderRadius:99,border:`1.5px dashed ${palette.primary}`,background:"transparent",color:palette.primary,fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",alignItems:"center",gap:4}}><Plus size={13}/>City</button>
-      </div>
-
-      {/* Add form */}
-      {showAdd&&(
-        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
-          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Add Restaurant {city?"— "+city:""}</h3>
-          <Inp label="Name" value={nr.name} placeholder="Restaurant name" onChange={v=>setNr(p=>({...p,name:v}))}/>
-          <CuisineInput value={nr.cuisine} onChange={v=>setNr(p=>({...p,cuisine:v}))} palette={palette}/>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Inp label="Price" value={nr.price} onChange={v=>setNr(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/>
-            <Inp label="Reservation" value={nr.reservationRequired} onChange={v=>setNr(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/>
-          </div>
-          <Inp label="Must-try dish" value={nr.mustTry} placeholder="Signature item" onChange={v=>setNr(p=>({...p,mustTry:v}))}/>
-          <Inp label="Area / District" value={nr.area} placeholder="Neighborhood" onChange={v=>setNr(p=>({...p,area:v}))}/>
-          <Inp label="Notes" value={nr.notes} placeholder="Hours, tips…" onChange={v=>setNr(p=>({...p,notes:v}))} multi rows={2}/>
-          {/* Rating */}
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
-            <StarRating value={nr.rating} onChange={v=>setNr(p=>({...p,rating:v}))}/>
-          </div>
-          <Inp label="My Review" value={nr.myReview} placeholder="What did you think?" onChange={v=>setNr(p=>({...p,myReview:v}))} multi rows={2}/>
-          <MediaUpload files={nr.files||[]} onAdd={f=>setNr(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNr(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Photos & Booking Confirmation" palette={palette}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={addR} disabled={!nr.name.trim()} style={{flex:1,background:nr.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nr.name.trim()?"pointer":"not-allowed"}}>Add Restaurant</button>
-            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
-          </div>
-        </div>
-      )}
-
-      {/* Search + filter */}
-      <div style={{marginBottom:12}}>
-        <div style={{display:"flex",alignItems:"center",background:"#fff",border:`1px solid ${palette.border}`,borderRadius:12,padding:"0 12px",marginBottom:8}}>
-          <Search size={14} color={palette.muted}/>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{flex:1,border:"none",outline:"none",padding:"10px 8px",fontSize:13,fontFamily:"inherit",color:palette.text,background:"transparent"}}/>
-          {search&&<button onClick={()=>setSearch("")} style={{background:"none",border:"none",cursor:"pointer",padding:0}}><X size={14} color={palette.muted}/></button>}
-        </div>
-        <div style={{display:"flex",gap:6,overflowX:"auto"}}>
-          {["all","wishlist","chosen","visited","skipped"].map(s=><button key={s} onClick={()=>setFSt(s)} style={{flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:fSt===s?palette.primary:"#F5F0F2",color:fSt===s?"#fff":palette.muted}}>{s==="all"?"All":REST_STATUS[s]?.label}</button>)}
+      {/* Base currency setting */}
+      <div style={{background:"#fff",borderRadius:14,border:`1px solid ${palette.border}`,padding:"12px 14px",marginBottom:14}}>
+        <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 8px"}}>Base Currency</p>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <p style={{fontSize:13,color:palette.text,margin:0,flex:1}}>All amounts will be shown in:</p>
+          <select value={baseCurrency} onChange={e=>onUpdate("baseCurrency",e.target.value)}
+            style={{border:`1px solid ${palette.border}`,borderRadius:10,padding:"7px 10px",fontSize:13,fontFamily:"inherit",outline:"none",background:"#FAF8F9",color:palette.text}}>
+            {CURRENCIES_ALL.map(c=><option key={c}>{c}</option>)}
+          </select>
         </div>
       </div>
 
-      {filtered.length===0&&<div style={{textAlign:"center",padding:"40px 0",color:palette.muted}}><div style={{fontSize:32,marginBottom:8}}>🍽️</div><p>No restaurants found</p></div>}
-
-      {filtered.map(r=>{
-        const st=REST_STATUS[r.status]||REST_STATUS.wishlist;
-        const isExp=expId===r.id, isEd=editId===r.id;
-        const hasFiles=(r.files||[]).length>0;
+      {wallets.map(w=>{
+        const wData=byWallet.find(x=>x.id===w.id)||{spent:0,txnCount:0};
+        const isCredit=w.type==="credit";
+        const outstanding=isCredit?wData.spent:0;
+        const pct=isCredit&&w.creditLimit>0?Math.min(100,Math.round((outstanding/w.creditLimit)*100)):0;
         return (
-          <div key={r.id} style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,marginBottom:10,overflow:"hidden"}}>
-            <div style={{padding:"14px 16px",cursor:"pointer"}} onClick={()=>!isEd&&setExpId(isExp?null:r.id)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:6}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{r.name}</h3>
-                  <div style={{display:"flex",gap:6,flexWrap:"wrap",alignItems:"center"}}>
-                    {r.cuisine&&<span style={{fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"2px 8px",borderRadius:99,fontWeight:600}}>{r.cuisine}</span>}
-                    {r.price&&<span style={{fontSize:12,color:palette.primary,fontWeight:700}}>{r.price}</span>}
-                    {r.area&&<span style={{fontSize:11,color:palette.muted,display:"flex",alignItems:"center",gap:3}}><MapPin size={10}/>{r.area}</span>}
-                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700}}>📎 {r.files.length}</span>}
+          <div key={w.id} style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:12}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
+              <div style={{display:"flex",alignItems:"center",gap:12}}>
+                <div style={{width:48,height:48,borderRadius:14,background:palette.primaryLight,display:"flex",alignItems:"center",justifyContent:"center",fontSize:26}}>{w.icon}</div>
+                <div>
+                  <h3 style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 2px"}}>{w.name}</h3>
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <span style={{fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"1px 7px",borderRadius:99,fontWeight:600}}>{WALLET_TYPES.find(t=>t.v===w.type)?.l||w.type}</span>
+                    <span style={{fontSize:11,background:"#F5F0F2",color:palette.muted,padding:"1px 7px",borderRadius:99,fontWeight:600}}>{w.currency}</span>
                   </div>
-                  {r.rating>0&&<div style={{marginTop:5}}><StarRating value={r.rating} onChange={()=>{}} size={13}/></div>}
-                </div>
-                <div style={{display:"flex",gap:6,marginLeft:8,flexShrink:0,flexDirection:"column",alignItems:"flex-end"}}>
-                  <button onClick={e=>{e.stopPropagation();cycle(r);}} style={{background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"5px 10px",cursor:"pointer"}}>{st.label}</button>
-                  <ChevronDown size={13} color={palette.muted} style={{transform:isExp?"rotate(180deg)":"none",transition:"transform 0.2s"}}/>
                 </div>
               </div>
-              {r.mustTry&&<p style={{fontSize:12,color:palette.text,margin:"4px 0 0"}}>⭐ {r.mustTry}</p>}
-              {r.reservationRequired&&r.reservationRequired!=="No"&&<span style={{fontSize:11,background:"#FFF3DC",color:"#8A6200",padding:"2px 8px",borderRadius:99,fontWeight:600,display:"inline-block",marginTop:4}}>Reservation: {r.reservationRequired}</span>}
+              <div style={{display:"flex",gap:6}}>
+                <button onClick={()=>{ setNw({...w,balance:String(w.balance),creditLimit:String(w.creditLimit||"")}); setEditWalletId(w.id); setShowAddWallet(true); }}
+                  style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Edit3 size={13}/></button>
+                <button onClick={()=>setDelWalletId(w.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"6px 10px",cursor:"pointer"}}><Trash2 size={13}/></button>
+              </div>
             </div>
 
-            {/* Expanded details */}
-            {isExp&&(
-              <div style={{padding:"0 16px 16px",borderTop:`1px solid ${palette.border}`}}>
-                {isEd?(
-                  <div style={{paddingTop:14}}>
-                    <Inp label="Name" value={ef.name||""} onChange={v=>setEf(p=>({...p,name:v}))}/>
-                    <CuisineInput value={ef.cuisine||""} onChange={v=>setEf(p=>({...p,cuisine:v}))} palette={palette}/>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                      <Inp label="Price" value={ef.price||""} onChange={v=>setEf(p=>({...p,price:v}))} opts={["¥","¥¥","¥¥¥","¥¥¥¥","$","$$","$$$","$$$$"]}/>
-                      <Inp label="Reservation" value={ef.reservationRequired||"No"} onChange={v=>setEf(p=>({...p,reservationRequired:v}))} opts={["No","Yes","Recommended"]}/>
-                    </div>
-                    <Inp label="Must-try" value={ef.mustTry||""} onChange={v=>setEf(p=>({...p,mustTry:v}))}/>
-                    <Inp label="Area" value={ef.area||""} onChange={v=>setEf(p=>({...p,area:v}))}/>
-                    <Inp label="Notes" value={ef.notes||""} onChange={v=>setEf(p=>({...p,notes:v}))} multi rows={2}/>
-                    <div style={{marginBottom:12}}>
-                      <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
-                      <StarRating value={ef.rating||0} onChange={v=>setEf(p=>({...p,rating:v}))}/>
-                    </div>
-                    <Inp label="My Review" value={ef.myReview||""} onChange={v=>setEf(p=>({...p,myReview:v}))} multi rows={2}/>
-                    <MediaUpload files={ef.files||[]} onAdd={f=>setEf(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setEf(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Photos & Docs" palette={palette}/>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={saveEdit} style={{flex:1,background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save</button>
-                      <button onClick={()=>setEditId(null)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
-                    </div>
-                  </div>
-                ):(
-                  <div style={{paddingTop:12}}>
-                    {r.notes&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 3px"}}>NOTES</p><p style={{fontSize:12,color:palette.text,margin:0}}>{r.notes}</p></div>}
-                    {r.myReview&&<div style={{background:palette.primaryLight+"55",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.primary,margin:"0 0 3px"}}>MY REVIEW</p><p style={{fontSize:12,color:palette.text,margin:0}}>{r.myReview}</p></div>}
-                    {hasFiles&&<div style={{marginBottom:10}}><MediaUpload files={r.files||[]} onAdd={f=>onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("restaurants",trip.restaurants.map(x=>x.id===r.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/></div>}
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>{setEditId(r.id);setEf({...r,files:r.files||[]});}} style={{display:"flex",alignItems:"center",gap:6,background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Edit3 size={13}/>Edit</button>
-                      <button onClick={()=>setDelId(r.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
-                    </div>
-                  </div>
-                )}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:8,marginBottom:isCredit?12:0}}>
+              {!isCredit&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>BALANCE</p><p style={{fontSize:15,fontWeight:800,color:palette.text,margin:0}}>{fmtMoney(w.balance,w.currency)}</p></div>}
+              {isCredit&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>OUTSTANDING</p><p style={{fontSize:15,fontWeight:800,color:"#E05C5C",margin:0}}>{fmtMoney(outstanding,w.currency)}</p></div>}
+              {isCredit&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>LIMIT</p><p style={{fontSize:15,fontWeight:800,color:palette.text,margin:0}}>{fmtMoney(w.creditLimit,w.currency)}</p></div>}
+              <div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>SPENT</p><p style={{fontSize:15,fontWeight:800,color:palette.primary,margin:0}}>{fmtMoney(wData.spent,w.currency)}</p></div>
+              <div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>TXN</p><p style={{fontSize:15,fontWeight:800,color:palette.text,margin:0}}>{wData.txnCount}</p></div>
+            </div>
+
+            {isCredit&&w.creditLimit>0&&(
+              <div>
+                <div style={{height:8,background:"#F5F0F2",borderRadius:99,overflow:"hidden",marginBottom:6}}>
+                  <div style={{height:"100%",width:`${pct}%`,background:pct>80?"#E05C5C":`linear-gradient(90deg,${palette.primary},${palette.accent})`,borderRadius:99,transition:"width 0.4s"}}/>
+                </div>
+                <p style={{fontSize:11,color:palette.muted,margin:0}}>{pct}% of credit limit used · {fmtMoney((parseFloat(w.creditLimit)||0)-outstanding,w.currency)} available</p>
               </div>
             )}
+            {w.notes&&<p style={{fontSize:12,color:palette.muted,margin:"8px 0 0",lineHeight:1.4}}>{w.notes}</p>}
           </div>
         );
       })}
+
+      {/* Categories */}
+      <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"14px 16px",marginTop:4}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:12}}>
+          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:0}}>Expense Categories</p>
+          <button onClick={()=>setShowAddCat(v=>!v)} style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"5px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Plus size={12}/> Add</button>
+        </div>
+        {showAddCat&&(
+          <div style={{display:"flex",gap:8,marginBottom:12,alignItems:"center"}}>
+            <input value={newCatEmoji} onChange={e=>setNewCatEmoji(e.target.value)} style={{width:44,border:`1px solid ${palette.border}`,borderRadius:10,padding:"8px",fontSize:16,textAlign:"center",outline:"none",background:"#FAF8F9"}}/>
+            <input value={newCatName} onChange={e=>setNewCatName(e.target.value)} onKeyDown={e=>{if(e.key==="Enter")addCategory();}} placeholder="Category name…" style={{flex:1,border:`1px solid ${palette.border}`,borderRadius:10,padding:"8px 10px",fontSize:13,fontFamily:"inherit",outline:"none",background:"#FAF8F9",color:palette.text}}/>
+            <button onClick={addCategory} disabled={!newCatName.trim()} style={{background:newCatName.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"8px 14px",fontSize:13,fontWeight:700,cursor:newCatName.trim()?"pointer":"not-allowed"}}>Add</button>
+          </div>
+        )}
+        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+          {categories.map(cat=>(
+            <div key={cat.id} style={{display:"flex",alignItems:"center",gap:5,background:cat.color+"18",border:`1px solid ${cat.color}33`,borderRadius:99,padding:"4px 10px 4px 8px"}}>
+              <span style={{fontSize:14}}>{cat.emoji}</span>
+              <span style={{fontSize:12,fontWeight:600,color:cat.color||palette.text}}>{cat.label}</span>
+              {!DEFAULT_CATEGORIES.find(d=>d.id===cat.id)&&(
+                <button onClick={()=>onUpdate("finCats",categories.filter(c=>c.id!==cat.id))} style={{background:"none",border:"none",cursor:"pointer",color:cat.color,fontSize:13,lineHeight:1,padding:"0 0 0 2px"}}>×</button>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
-}
 
-// ══════════════════════════════════════════════════════════════
-// HOTELS VIEW — with photo/doc upload + rating
-// ══════════════════════════════════════════════════════════════
-function HotelsView({ trip, palette, onUpdate }) {
-  const [copied,setCopied]=useState(null);
-  const [showAdd,setShowAdd]=useState(false);
-  const [delId,setDelId]=useState(null);
-  const [expId,setExpId]=useState(null);
-  const [nh,setNh]=useState({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",rating:0,myReview:"",files:[]});
-
-  const copy=(id,txt)=>{navigator.clipboard.writeText(txt).catch(()=>{});setCopied(id);setTimeout(()=>setCopied(null),1500);};
-  const doDelete=(id)=>{onUpdate("hotels",trip.hotels.filter(x=>x.id!==id));setDelId(null);};
-  const addH=()=>{
-    if(!nh.name.trim())return;
-    onUpdate("hotels",[...trip.hotels,{...nh,id:uid()}]);
-    setShowAdd(false);
-    setNh({city:"",name:"",checkIn:"",checkOut:"",confirmation:"",address:"",phone:"",notes:"",rating:0,myReview:"",files:[]});
-  };
-
-  return (
-    <div style={{padding:"20px 16px 40px"}}>
-      {delId&&<Confirm message="Remove this hotel?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
-        <div><h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Hotels</h2><p style={{color:palette.muted,fontSize:13,margin:0}}>{trip.hotels.length} stays</p></div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add Hotel</button>
+  const AnalyticsSection = () => (
+    <div>
+      {/* Spending trend */}
+      <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14}}>
+        <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 14px"}}>Spending Trend (Last 14 Days)</p>
+        <MiniBar data={byDay} palette={palette} height={80}/>
       </div>
 
-      {showAdd&&(
-        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
-          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>New Stay</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Inp label="City" value={nh.city} placeholder="e.g. Tokyo" onChange={v=>setNh(p=>({...p,city:v}))}/>
-            <Inp label="Hotel Name" value={nh.name} placeholder="Hotel name" onChange={v=>setNh(p=>({...p,name:v}))}/>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            <Inp label="Check-in" type="date" value={nh.checkIn} onChange={v=>setNh(p=>({...p,checkIn:v}))}/>
-            <Inp label="Check-out" type="date" value={nh.checkOut} onChange={v=>setNh(p=>({...p,checkOut:v}))}/>
-          </div>
-          <Inp label="Confirmation #" value={nh.confirmation} placeholder="Booking reference" onChange={v=>setNh(p=>({...p,confirmation:v}))}/>
-          <Inp label="Address" value={nh.address} placeholder="Full address" onChange={v=>setNh(p=>({...p,address:v}))}/>
-          <Inp label="Phone" value={nh.phone} placeholder="+XX XXX XXXX" onChange={v=>setNh(p=>({...p,phone:v}))}/>
-          <Inp label="Notes" value={nh.notes} placeholder="Early check-in, preferences…" onChange={v=>setNh(p=>({...p,notes:v}))} multi rows={2}/>
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
-            <StarRating value={nh.rating} onChange={v=>setNh(p=>({...p,rating:v}))}/>
-          </div>
-          <Inp label="My Review" value={nh.myReview} placeholder="Would you stay again?" onChange={v=>setNh(p=>({...p,myReview:v}))} multi rows={2}/>
-          <MediaUpload files={nh.files||[]} onAdd={f=>setNh(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNh(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} label="Booking Confirmation & Photos" palette={palette}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={addH} disabled={!nh.name.trim()} style={{flex:1,background:nh.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:nh.name.trim()?"pointer":"not-allowed"}}>Add Hotel</button>
-            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
+      {/* By category donut */}
+      {byCat.length>0&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14}}>
+          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 14px"}}>Spending by Category</p>
+          <div style={{display:"flex",alignItems:"center",gap:20}}>
+            <DonutChart data={byCat.map(c=>({value:c.total,color:c.color,label:c.label}))} palette={palette} size={110}/>
+            <div style={{flex:1}}>
+              {byCat.slice(0,6).map(cat=>(
+                <div key={cat.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:cat.color,flexShrink:0}}/>
+                    <span style={{fontSize:12,color:palette.text}}>{cat.emoji} {cat.label}</span>
+                  </div>
+                  <span style={{fontSize:12,fontWeight:700,color:palette.text}}>{fmtMoney(cat.total,baseCurrency)}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {trip.hotels.map(h=>{
-        const nights=nightsBetween(h.checkIn,h.checkOut),du=daysUntil(h.checkIn);
-        const active=new Date(h.checkIn+"T00:00:00")<=new Date()&&new Date(h.checkOut+"T00:00:00")>=new Date();
-        const past=new Date(h.checkOut+"T00:00:00")<new Date();
-        const isExp=expId===h.id;
-        const hasFiles=(h.files||[]).length>0;
-        return(
-          <div key={h.id} style={{background:"#fff",borderRadius:20,border:`1.5px solid ${active?palette.primary+"44":palette.border}`,marginBottom:12,overflow:"hidden",opacity:past?0.7:1}}>
-            {active&&<div style={{background:`linear-gradient(90deg,${palette.primary},${palette.accent})`,height:4}}/>}
-            <div style={{padding:"16px 18px",cursor:"pointer"}} onClick={()=>setExpId(isExp?null:h.id)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:10}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:5,flexWrap:"wrap"}}>
-                    <span style={{background:cityColor(h.city)+"20",color:cityColor(h.city),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99}}>{h.city}</span>
-                    {active&&<span style={{background:palette.primaryLight,color:palette.primary,fontSize:10,fontWeight:800,padding:"2px 8px",borderRadius:99}}>STAYING HERE</span>}
-                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"2px 8px",borderRadius:99,fontWeight:700}}>📄 Docs</span>}
+      {/* By wallet donut */}
+      {byWallet.filter(w=>w.spent>0).length>0&&(
+        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px",marginBottom:14}}>
+          <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 14px"}}>Spending by Wallet</p>
+          <div style={{display:"flex",alignItems:"center",gap:20}}>
+            <DonutChart data={byWallet.filter(w=>w.spent>0).map((w,i)=>({value:w.spent,color:["#C97B84","#7B6FA0","#6B8F71","#C46E3A","#5B8DAE"][i%5],label:w.name}))} palette={palette} size={110}/>
+            <div style={{flex:1}}>
+              {byWallet.filter(w=>w.spent>0).map((w,i)=>(
+                <div key={w.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:6}}>
+                  <div style={{display:"flex",alignItems:"center",gap:6}}>
+                    <div style={{width:10,height:10,borderRadius:"50%",background:["#C97B84","#7B6FA0","#6B8F71","#C46E3A","#5B8DAE"][i%5],flexShrink:0}}/>
+                    <span style={{fontSize:12,color:palette.text}}>{w.icon} {w.name}</span>
                   </div>
-                  <h3 style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>{h.name}</h3>
-                  {h.rating>0&&<StarRating value={h.rating} onChange={()=>{}} size={13}/>}
+                  <span style={{fontSize:12,fontWeight:700,color:palette.text}}>{fmtMoney(w.spent,w.currency)}</span>
                 </div>
-                <div style={{textAlign:"right",display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6}}>
-                  <div><div style={{fontSize:20,fontWeight:800,color:palette.primary}}>{nights}</div><div style={{fontSize:11,color:palette.muted,fontWeight:600}}>night{nights!==1?"s":""}</div></div>
-                  <ChevronDown size={13} color={palette.muted} style={{transform:isExp?"rotate(180deg)":"none",transition:"0.2s"}}/>
-                </div>
-              </div>
-              <div style={{background:"#FAF8F9",borderRadius:12,padding:"10px 12px",display:"flex",justifyContent:"space-between"}}>
-                <div><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>CHECK IN</p><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtDate(h.checkIn)}</p></div>
-                <div style={{width:1,background:palette.border}}/>
-                <div style={{textAlign:"right"}}><p style={{fontSize:10,fontWeight:700,color:palette.muted,margin:"0 0 2px"}}>CHECK OUT</p><p style={{fontSize:13,fontWeight:700,color:palette.text,margin:0}}>{fmtDate(h.checkOut)}</p></div>
-              </div>
-              {!past&&du>0&&<p style={{fontSize:11,color:palette.muted,margin:"8px 0 0",textAlign:"center"}}>Check-in in {du} day{du!==1?"s":""}</p>}
+              ))}
             </div>
-
-            {isExp&&(
-              <div style={{padding:"0 18px 16px",borderTop:`1px solid ${palette.border}`}}>
-                <div style={{paddingTop:12,display:"flex",gap:8,marginBottom:12}}>
-                  {h.confirmation&&<button onClick={()=>copy(h.id,h.confirmation)} style={{flex:1,display:"flex",alignItems:"center",justifyContent:"center",gap:6,background:copied===h.id?"#DFF0E1":palette.primaryLight,color:copied===h.id?"#3A6B42":palette.primary,border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>{copied===h.id?<Check size={13}/>:<Copy size={13}/>}{copied===h.id?"Copied!":h.confirmation}</button>}
-                  {h.address&&<a href={`https://maps.google.com/?q=${encodeURIComponent(h.address)}`} target="_blank" rel="noreferrer" style={{display:"flex",alignItems:"center",gap:5,background:"#F5F0F2",color:palette.muted,borderRadius:10,padding:"10px 14px",fontSize:12,fontWeight:700,textDecoration:"none"}}><MapPin size={13}/>Map</a>}
-                </div>
-                {h.myReview&&<div style={{background:palette.primaryLight+"55",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.primary,margin:"0 0 3px"}}>MY REVIEW</p><p style={{fontSize:12,color:palette.text,margin:0}}>{h.myReview}</p></div>}
-                {h.notes&&<p style={{fontSize:12,color:palette.muted,margin:"0 0 10px",lineHeight:1.4}}>{h.notes}</p>}
-                {hasFiles&&<MediaUpload files={h.files||[]} onAdd={f=>onUpdate("hotels",trip.hotels.map(x=>x.id===h.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("hotels",trip.hotels.map(x=>x.id===h.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/>}
-                <div style={{display:"flex",gap:8,marginTop:8}}>
-                  <button onClick={()=>doDelete(h.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
-                </div>
-              </div>
-            )}
-          </div>
-        );
-      })}
-      {trip.hotels.length===0&&<div style={{textAlign:"center",padding:"60px 0",color:palette.muted}}><div style={{fontSize:40,marginBottom:12}}>🏨</div><p>No hotels yet</p></div>}
-    </div>
-  );
-}
-
-// ══════════════════════════════════════════════════════════════
-// PLACES WISHLIST — rate places you want to visit / have visited
-// ══════════════════════════════════════════════════════════════
-function PlacesView({ trip, palette, onUpdate }) {
-  const places = trip.places || [];
-  const cities = [...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
-  const allCities = [...new Set([...cities, ...places.map(p=>p.city).filter(Boolean)])];
-  const [filterCity, setFilterCity] = useState("all");
-  const [filterStatus, setFilterStatus] = useState("all");
-  const [showAdd, setShowAdd] = useState(false);
-  const [delId, setDelId] = useState(null);
-  const [expId, setExpId] = useState(null);
-  const [editId, setEditId] = useState(null);
-  const [ef, setEf] = useState({});
-  const blank = () => ({city:cities[0]||"",name:"",category:"sight",address:"",notes:"",status:"want",rating:0,myReview:"",files:[]});
-  const [np, setNp] = useState(blank());
-
-  const PLACE_STATUS = {want:{bg:"#EEE8F8",text:"#5B4C8A",label:"Want to Go"},been:{bg:"#DFF0E1",text:"#3A6B42",label:"Been There"},skip:{bg:"#F1EFEF",text:"#6A6060",label:"Skip"}};
-  const PLACE_CATS = [{v:"sight",l:"🏛️ Sight"},{v:"nature",l:"🌿 Nature"},{v:"museum",l:"🎨 Museum"},{v:"market",l:"🛒 Market"},{v:"temple",l:"⛩️ Temple/Church"},{v:"park",l:"🌸 Park"},{v:"shopping",l:"🛍️ Shopping"},{v:"activity",l:"🎭 Activity"},{v:"other",l:"📍 Other"}];
-
-  const cycleStatus=(p)=>{const s=["want","been","skip"];const i=s.indexOf(p.status);onUpdate("places",places.map(x=>x.id===p.id?{...x,status:s[(i+1)%s.length]}:x));};
-  const doDelete=(id)=>{onUpdate("places",places.filter(x=>x.id!==id));setDelId(null);setExpId(null);};
-  const saveEdit=()=>{onUpdate("places",places.map(x=>x.id===editId?{...x,...ef}:x));setEditId(null);};
-  const addPlace=()=>{
-    if(!np.name.trim())return;
-    onUpdate("places",[...places,{...np,id:uid()}]);
-    setShowAdd(false); setNp(blank());
-  };
-
-  const filtered = places.filter(p=>
-    (filterCity==="all"||p.city===filterCity)&&
-    (filterStatus==="all"||p.status===filterStatus)
-  );
-
-  return (
-    <div style={{padding:"20px 16px 40px"}}>
-      {delId&&<Confirm message="Delete this place?" onOk={()=>doDelete(delId)} onNo={()=>setDelId(null)}/>}
-
-      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-        <div>
-          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Places</h2>
-          <p style={{color:palette.muted,fontSize:13,margin:0}}>{places.filter(p=>p.status==="want").length} want to go · {places.filter(p=>p.status==="been").length} visited</p>
-        </div>
-        <button onClick={()=>setShowAdd(v=>!v)} style={{display:"flex",alignItems:"center",gap:6,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"9px 16px",fontSize:13,fontWeight:700,cursor:"pointer"}}><Plus size={15}/>Add</button>
-      </div>
-
-      {/* Filters */}
-      <div style={{display:"flex",gap:6,overflowX:"auto",paddingBottom:8,marginBottom:8}}>
-        <button onClick={()=>setFilterCity("all")} style={{flexShrink:0,padding:"6px 14px",borderRadius:99,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:filterCity==="all"?palette.primary:palette.primaryLight,color:filterCity==="all"?"#fff":palette.primary}}>All cities</button>
-        {allCities.map(c=><button key={c} onClick={()=>setFilterCity(c)} style={{flexShrink:0,padding:"6px 14px",borderRadius:99,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:filterCity===c?palette.primary:palette.primaryLight,color:filterCity===c?"#fff":palette.primary}}>{c}</button>)}
-      </div>
-      <div style={{display:"flex",gap:6,marginBottom:14}}>
-        {["all","want","been","skip"].map(s=><button key={s} onClick={()=>setFilterStatus(s)} style={{flexShrink:0,padding:"5px 12px",borderRadius:99,border:"none",fontSize:11,fontWeight:700,cursor:"pointer",background:filterStatus===s?palette.primary:"#F5F0F2",color:filterStatus===s?"#fff":palette.muted}}>{s==="all"?"All":PLACE_STATUS[s]?.label}</button>)}
-      </div>
-
-      {/* Add form */}
-      {showAdd&&(
-        <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:20,marginBottom:16,boxShadow:"0 4px 20px rgba(0,0,0,0.07)"}}>
-          <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 14px"}}>Add Place</h3>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-            {cities.length>0
-              ? <Inp label="City" value={np.city} opts={cities} onChange={v=>setNp(p=>({...p,city:v}))}/>
-              : <Inp label="City" value={np.city} placeholder="City" onChange={v=>setNp(p=>({...p,city:v}))}/>}
-            <Inp label="Category" value={np.category} opts={PLACE_CATS} onChange={v=>setNp(p=>({...p,category:v}))}/>
-          </div>
-          <Inp label="Place Name" value={np.name} placeholder="e.g. Senso-ji Temple" onChange={v=>setNp(p=>({...p,name:v}))}/>
-          <Inp label="Address / Area" value={np.address} placeholder="District or address" onChange={v=>setNp(p=>({...p,address:v}))}/>
-          <Inp label="Notes" value={np.notes} placeholder="Opening hours, tips, why you want to go…" onChange={v=>setNp(p=>({...p,notes:v}))} multi rows={2}/>
-          <div style={{marginBottom:12}}>
-            <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>My Rating</label>
-            <StarRating value={np.rating} onChange={v=>setNp(p=>({...p,rating:v}))}/>
-          </div>
-          <Inp label="My Review" value={np.myReview} placeholder="What did you think?" onChange={v=>setNp(p=>({...p,myReview:v}))} multi rows={2}/>
-          <MediaUpload files={np.files||[]} onAdd={f=>setNp(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setNp(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} palette={palette}/>
-          <div style={{display:"flex",gap:8}}>
-            <button onClick={addPlace} disabled={!np.name.trim()} style={{flex:1,background:np.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:700,cursor:np.name.trim()?"pointer":"not-allowed"}}>Add Place</button>
-            <button onClick={()=>setShowAdd(false)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"11px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
           </div>
         </div>
       )}
 
-      {filtered.length===0&&!showAdd&&(
-        <div style={{textAlign:"center",padding:"50px 0",color:palette.muted}}>
-          <div style={{fontSize:40,marginBottom:12}}>🗺️</div>
-          <p style={{fontSize:16,fontWeight:700,color:palette.text,margin:"0 0 6px"}}>No places yet</p>
-          <p style={{fontSize:13}}>Add sights, parks, museums — rate them to remember for next time</p>
-        </div>
-      )}
-
-      {filtered.map(p=>{
-        const st=PLACE_STATUS[p.status]||PLACE_STATUS.want;
-        const cat=PLACE_CATS.find(c=>c.v===p.category)||PLACE_CATS[PLACE_CATS.length-1];
-        const isExp=expId===p.id, isEd=editId===p.id;
-        const hasFiles=(p.files||[]).length>0;
-        return (
-          <div key={p.id} style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,marginBottom:10,overflow:"hidden"}}>
-            <div style={{padding:"14px 16px",cursor:"pointer"}} onClick={()=>!isEd&&setExpId(isExp?null:p.id)}>
-              <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start"}}>
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:6,marginBottom:3,flexWrap:"wrap"}}>
-                    <span style={{fontSize:13}}>{cat.l.split(" ")[0]}</span>
-                    <span style={{fontSize:11,background:cityColor(p.city)+"20",color:cityColor(p.city),padding:"1px 8px",borderRadius:99,fontWeight:700}}>{p.city}</span>
-                    {hasFiles&&<span style={{fontSize:10,background:"#DFF0E1",color:"#3A6B42",padding:"1px 7px",borderRadius:99,fontWeight:700}}>📎</span>}
-                  </div>
-                  <h3 style={{fontSize:15,fontWeight:700,color:palette.text,margin:"0 0 4px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:isExp?"normal":"nowrap"}}>{p.name}</h3>
-                  {p.address&&<p style={{fontSize:11,color:palette.muted,margin:"0 0 4px",display:"flex",alignItems:"center",gap:3}}><MapPin size={10}/>{p.address}</p>}
-                  {p.rating>0&&<StarRating value={p.rating} onChange={()=>{}} size={13}/>}
-                </div>
-                <div style={{display:"flex",flexDirection:"column",alignItems:"flex-end",gap:6,marginLeft:10}}>
-                  <button onClick={e=>{e.stopPropagation();cycleStatus(p);}} style={{background:st.bg,color:st.text,border:"none",borderRadius:99,fontSize:10,fontWeight:700,padding:"4px 9px",cursor:"pointer",whiteSpace:"nowrap"}}>{st.label}</button>
-                  <ChevronDown size={13} color={palette.muted} style={{transform:isExp?"rotate(180deg)":"none",transition:"0.2s"}}/>
-                </div>
-              </div>
-            </div>
-            {isExp&&(
-              <div style={{padding:"0 16px 16px",borderTop:`1px solid ${palette.border}`}}>
-                {isEd?(
-                  <div style={{paddingTop:14}}>
-                    <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
-                      {cities.length>0?<Inp label="City" value={ef.city||""} opts={cities} onChange={v=>setEf(p=>({...p,city:v}))}/>:<Inp label="City" value={ef.city||""} onChange={v=>setEf(p=>({...p,city:v}))}/>}
-                      <Inp label="Category" value={ef.category||"sight"} opts={PLACE_CATS} onChange={v=>setEf(p=>({...p,category:v}))}/>
-                    </div>
-                    <Inp label="Name" value={ef.name||""} onChange={v=>setEf(p=>({...p,name:v}))}/>
-                    <Inp label="Address" value={ef.address||""} onChange={v=>setEf(p=>({...p,address:v}))}/>
-                    <Inp label="Notes" value={ef.notes||""} onChange={v=>setEf(p=>({...p,notes:v}))} multi rows={2}/>
-                    <div style={{marginBottom:12}}>
-                      <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:6,textTransform:"uppercase",letterSpacing:"0.05em"}}>Rating</label>
-                      <StarRating value={ef.rating||0} onChange={v=>setEf(p=>({...p,rating:v}))}/>
-                    </div>
-                    <Inp label="My Review" value={ef.myReview||""} onChange={v=>setEf(p=>({...p,myReview:v}))} multi rows={2}/>
-                    <MediaUpload files={ef.files||[]} onAdd={f=>setEf(p=>({...p,files:[...(p.files||[]),f]}))} onRemove={i=>setEf(p=>({...p,files:p.files.filter((_,pi)=>pi!==i)}))} palette={palette}/>
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={saveEdit} style={{flex:1,background:palette.primary,color:"#fff",border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:700,cursor:"pointer"}}>Save</button>
-                      <button onClick={()=>setEditId(null)} style={{flex:1,background:"#F5F0F2",color:palette.muted,border:"none",borderRadius:10,padding:"10px 0",fontSize:13,fontWeight:600,cursor:"pointer"}}>Cancel</button>
-                    </div>
-                  </div>
-                ):(
-                  <div style={{paddingTop:12}}>
-                    {p.notes&&<div style={{background:"#FAF8F9",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.muted,margin:"0 0 3px"}}>NOTES</p><p style={{fontSize:12,color:palette.text,margin:0}}>{p.notes}</p></div>}
-                    {p.myReview&&<div style={{background:palette.primaryLight+"55",borderRadius:10,padding:"10px 12px",marginBottom:10}}><p style={{fontSize:11,fontWeight:700,color:palette.primary,margin:"0 0 3px"}}>MY REVIEW</p><p style={{fontSize:12,color:palette.text,margin:0}}>{p.myReview}</p></div>}
-                    {hasFiles&&<div style={{marginBottom:10}}><MediaUpload files={p.files||[]} onAdd={f=>onUpdate("places",places.map(x=>x.id===p.id?{...x,files:[...(x.files||[]),f]}:x))} onRemove={i=>onUpdate("places",places.map(x=>x.id===p.id?{...x,files:x.files.filter((_,pi)=>pi!==i)}:x))} palette={palette}/></div>}
-                    <div style={{display:"flex",gap:8}}>
-                      <button onClick={()=>{setEditId(p.id);setEf({...p,files:p.files||[]});}} style={{display:"flex",alignItems:"center",gap:6,background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Edit3 size={13}/>Edit</button>
-                      <button onClick={()=>setDelId(p.id)} style={{display:"flex",alignItems:"center",gap:6,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:10,padding:"8px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}><Trash2 size={13}/>Delete</button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
+      {/* Stats */}
+      <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px 18px"}}>
+        <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 12px"}}>Trip Statistics</p>
+        {[
+          ["Total Spent",fmtMoneyFull(totalSpent,baseCurrency)],
+          ["Daily Average",fmtMoneyFull(dailyAvg,baseCurrency)],
+          ["Highest Single Expense", fmtMoneyFull(Math.max(...expenses.map(e=>parseFloat(e.amount)||0),0),baseCurrency)],
+          ["Most Used Category", byCat[0]?`${byCat[0].emoji} ${byCat[0].label}`:"—"],
+          ["Days with Expenses",String([...new Set(expenses.map(e=>e.date))].length)],
+          ["Currencies Used",[...new Set(expenses.map(e=>e.currency))].join(", ")||"—"],
+        ].map(([label,val])=>(
+          <div key={label} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${palette.border}`}}>
+            <span style={{fontSize:13,color:palette.muted}}>{label}</span>
+            <span style={{fontSize:13,fontWeight:700,color:palette.text}}>{val}</span>
           </div>
-        );
-      })}
+        ))}
+      </div>
     </div>
   );
-}
 
-// ══════════════════════════════════════════════════════════════
-// TRIP SELECTOR — with delete
-// ══════════════════════════════════════════════════════════════
-function TripSelector({ trips, onSelect, onCreate, onImport, onDelete, palette }) {
-  const fileRef=useRef();
-  const [dragging,setDragging]=useState(false);
-  const [delId,setDelId]=useState(null);
+  // ── Add Expense Form ──────────────────────────────────────────
+  const AddExpenseForm = () => (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div style={{background:"#fff",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:680,maxHeight:"90vh",overflowY:"auto",padding:"24px 20px 40px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <h3 style={{fontSize:18,fontWeight:700,color:palette.text,margin:0,fontFamily:"'Playfair Display',serif"}}>{editExpId?"Edit":"Add"} Expense</h3>
+          <button onClick={()=>{ setShowAddExp(false); setEditExpId(null); setNe(blankExp()); }} style={{background:"#F5F0F2",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} color={palette.muted}/></button>
+        </div>
 
-  const parseAndCreate=(file)=>{
-    const reader=new FileReader();
-    reader.onload=(e)=>{
-      try{
-        const wb=XLSX.read(e.target.result,{type:"binary"});
-        const sheets={};
-        wb.SheetNames.forEach(n=>{sheets[n]=XLSX.utils.sheet_to_json(wb.Sheets[n],{defval:""});});
-        onImport(parseExcelSheets(sheets));
-      }catch(err){console.error("Import error:",err);alert("Could not read file. Open F12 console for details.");}
-    };
-    reader.readAsBinaryString(file);
-  };
+        <Inp label="Description" value={ne.description} placeholder="What did you spend on?" onChange={v=>setNe(p=>({...p,description:v}))}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8}}>
+          <Inp label="Amount" type="number" value={ne.amount} placeholder="0.00" onChange={v=>setNe(p=>({...p,amount:v,convertedAmount:v}))}/>
+          <Inp label="Currency" value={ne.currency} opts={CURRENCIES_ALL} onChange={v=>setNe(p=>({...p,currency:v}))}/>
+        </div>
 
-  const tripStatus=(t)=>{
-    if(!t.startDate)return{label:"Draft",color:"#6A6060",bg:"#F1EFEF"};
-    const du=daysUntil(t.startDate);
-    if(du>0)return{label:`In ${du} days`,color:"#8A6200",bg:"#FFF3DC"};
-    if(du===0)return{label:"Today!",color:"#fff",bg:"#C97B84"};
-    if(daysUntil(t.endDate)>=0)return{label:"Ongoing",color:"#3A6B42",bg:"#DFF0E1"};
-    return{label:"Completed",color:"#6A6060",bg:"#F1EFEF"};
-  };
-
-  return (
-    <div style={{minHeight:"100vh",background:"linear-gradient(160deg,#FAF7F8 0%,#F2DDE1 100%)",fontFamily:"'DM Sans',sans-serif"}}>
-      <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700;800&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet"/>
-      {delId&&<Confirm message="Permanently delete this trip and all its data? This cannot be undone." onOk={()=>{onDelete(delId);setDelId(null);}} onNo={()=>setDelId(null)}/>}
-
-      <div style={{padding:"44px 24px 0"}}>
-        <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:6}}>
-          <span style={{fontSize:38}}>☁️</span>
-          <div>
-            <h1 style={{fontFamily:"'Playfair Display',Georgia,serif",fontSize:28,fontWeight:700,color:"#2D2426",margin:0}}>Kumo Travel</h1>
-            <p style={{color:"#9A8F92",fontSize:13,margin:0}}>All your trips in one place</p>
+        {ne.currency!==baseCurrency&&(
+          <div style={{display:"grid",gridTemplateColumns:"1fr auto",gap:8}}>
+            <Inp label={`Converted to ${baseCurrency}`} type="number" value={ne.convertedAmount} placeholder="0.00" onChange={v=>setNe(p=>({...p,convertedAmount:v}))}/>
+            <Inp label="Base" value={baseCurrency} opts={[baseCurrency]} onChange={()=>{}}/>
           </div>
-        </div>
-      </div>
-
-      <div style={{padding:"28px 24px 60px"}}>
-        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10,marginBottom:20}}>
-          <button onClick={onCreate} style={{background:palette.primary,color:"#fff",border:"none",borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-            <Plus size={22}/>New Trip
-          </button>
-          <button onClick={()=>fileRef.current.click()} onDragOver={e=>{e.preventDefault();setDragging(true);}} onDragLeave={()=>setDragging(false)} onDrop={e=>{e.preventDefault();setDragging(false);const f=e.dataTransfer.files[0];if(f)parseAndCreate(f);}}
-            style={{background:dragging?palette.primaryLight:"#fff",color:palette.primary,border:`2px dashed ${palette.primary}`,borderRadius:16,padding:"18px 12px",fontSize:13,fontWeight:700,cursor:"pointer",display:"flex",flexDirection:"column",alignItems:"center",gap:6}}>
-            <Upload size={22}/>Import Excel
-          </button>
-          <input ref={fileRef} type="file" accept=".xlsx,.xls" style={{display:"none"}} onChange={e=>{if(e.target.files[0])parseAndCreate(e.target.files[0]);}}/>
-        </div>
-
-        {trips.length===0&&(
-          <>
-            <button onClick={()=>onImport({...DEMO_TRIP,id:uid()})} style={{width:"100%",background:"#fff",color:"#9A8F92",border:"1px solid #EDE5E7",borderRadius:14,padding:"13px",fontSize:13,fontWeight:600,cursor:"pointer",marginBottom:28}}>✈️ Load Japan demo trip</button>
-            <div style={{textAlign:"center",padding:"20px 0",color:"#9A8F92"}}>
-              <div style={{fontSize:48,marginBottom:12}}>🗺️</div>
-              <p style={{fontSize:16,fontWeight:700,color:"#2D2426",margin:"0 0 6px"}}>No trips yet</p>
-              <p style={{fontSize:13}}>Create a trip or import your Excel planner</p>
-            </div>
-          </>
         )}
 
-        {trips.length>0&&(
-          <>
-            <p style={{fontSize:11,fontWeight:800,color:"#9A8F92",textTransform:"uppercase",letterSpacing:"0.08em",margin:"0 0 12px"}}>Your Trips ({trips.length})</p>
-            {trips.map(trip=>{
-              const st=tripStatus(trip);
-              const cities=[...new Set(trip.itinerary.map(d=>d.city).filter(Boolean))];
+        {/* Category picker */}
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Category</label>
+          <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(80px,1fr))",gap:6}}>
+            {categories.map(cat=>(
+              <button key={cat.id} onClick={()=>setNe(p=>({...p,categoryId:cat.id}))}
+                style={{padding:"8px 6px",borderRadius:12,border:`2px solid ${ne.categoryId===cat.id?cat.color:"transparent"}`,background:ne.categoryId===cat.id?cat.color+"22":"#FAF8F9",cursor:"pointer",textAlign:"center"}}>
+                <div style={{fontSize:20,marginBottom:2}}>{cat.emoji}</div>
+                <div style={{fontSize:9,color:ne.categoryId===cat.id?(cat.color||palette.primary):palette.muted,fontWeight:700,lineHeight:1.2}}>{cat.label}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Wallet picker */}
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Payment Method *</label>
+          <div style={{display:"flex",gap:8,overflowX:"auto",paddingBottom:4}}>
+            {wallets.map(w=>(
+              <button key={w.id} onClick={()=>setNe(p=>({...p,walletId:w.id}))}
+                style={{flexShrink:0,padding:"10px 14px",borderRadius:14,border:`2px solid ${ne.walletId===w.id?palette.primary:"transparent"}`,background:ne.walletId===w.id?palette.primaryLight:"#FAF8F9",cursor:"pointer",textAlign:"center",minWidth:72}}>
+                <div style={{fontSize:22,marginBottom:3}}>{w.icon}</div>
+                <div style={{fontSize:10,fontWeight:700,color:ne.walletId===w.id?palette.primary:palette.muted,whiteSpace:"nowrap"}}>{w.name}</div>
+                {(w.type==="cash"||w.type==="debit")&&<div style={{fontSize:9,color:palette.muted,marginTop:1}}>{fmtMoney(w.balance,w.currency)}</div>}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <Inp label="Date" type="date" value={ne.date} onChange={v=>setNe(p=>({...p,date:v}))}/>
+          <Inp label="Time" type="time" value={ne.time} onChange={v=>setNe(p=>({...p,time:v}))}/>
+        </div>
+        <Inp label="Location (optional)" value={ne.location||""} placeholder="Restaurant name, city…" onChange={v=>setNe(p=>({...p,location:v}))}/>
+        <Inp label="Notes (optional)" value={ne.notes||""} placeholder="Extra details…" onChange={v=>setNe(p=>({...p,notes:v}))} multi rows={2}/>
+
+        {/* Receipt */}
+        <div style={{marginBottom:16}}>
+          <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Receipt (optional)</label>
+          {ne.receiptData
+            ? <div style={{display:"flex",alignItems:"center",gap:8,background:"#FAF8F9",borderRadius:10,padding:"8px 12px",border:`1px solid ${palette.border}`}}>
+                <span style={{fontSize:16}}>🧾</span>
+                <span style={{flex:1,fontSize:12,fontWeight:600,color:palette.text,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ne.receiptData.name}</span>
+                <button onClick={()=>setNe(p=>({...p,receiptData:null}))} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:7,padding:"4px 8px",fontSize:11,cursor:"pointer"}}>✕</button>
+              </div>
+            : <button onClick={()=>receiptRef.current.click()} style={{display:"flex",alignItems:"center",gap:6,background:"#F5F0F2",color:"#9A8F92",border:"1px dashed #D0C8CA",borderRadius:10,padding:"9px 14px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
+                <Camera size={13}/>Attach receipt
+              </button>
+          }
+          <input ref={receiptRef} type="file" accept="image/*,.pdf" style={{display:"none"}} onChange={async e=>{ if(e.target.files[0]){const r=await new Promise(res=>{const fr=new FileReader();fr.onload=ev=>res({name:e.target.files[0].name,type:e.target.files[0].type,data:ev.target.result});fr.readAsDataURL(e.target.files[0]);});setNe(p=>({...p,receiptData:r}));}}}/>
+        </div>
+
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={saveExpense} disabled={!ne.description.trim()||!ne.amount||!ne.walletId}
+            style={{flex:1,background:(ne.description.trim()&&ne.amount&&ne.walletId)?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:12,padding:"13px 0",fontSize:14,fontWeight:700,cursor:(ne.description.trim()&&ne.amount&&ne.walletId)?"pointer":"not-allowed"}}>
+            {editExpId?"Save Changes":"Add Expense"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── Add Wallet Form ───────────────────────────────────────────
+  const AddWalletForm = () => (
+    <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.5)",zIndex:2000,display:"flex",alignItems:"flex-end",justifyContent:"center"}}>
+      <div style={{background:"#fff",borderRadius:"24px 24px 0 0",width:"100%",maxWidth:680,maxHeight:"85vh",overflowY:"auto",padding:"24px 20px 40px"}}>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:18}}>
+          <h3 style={{fontSize:18,fontWeight:700,color:palette.text,margin:0,fontFamily:"'Playfair Display',serif"}}>{editWalletId?"Edit":"Add"} Wallet</h3>
+          <button onClick={()=>{ setShowAddWallet(false); setEditWalletId(null); setNw(blankWallet()); }} style={{background:"#F5F0F2",border:"none",borderRadius:"50%",width:32,height:32,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}><X size={16} color={palette.muted}/></button>
+        </div>
+
+        {/* Icon picker */}
+        <div style={{marginBottom:12}}>
+          <label style={{fontSize:11,fontWeight:700,color:"#9A8F92",display:"block",marginBottom:8,textTransform:"uppercase",letterSpacing:"0.05em"}}>Icon</label>
+          <div style={{display:"flex",gap:8,flexWrap:"wrap"}}>
+            {WALLET_ICONS.map(icon=>(
+              <button key={icon} onClick={()=>setNw(p=>({...p,icon}))}
+                style={{width:44,height:44,borderRadius:12,border:`2px solid ${nw.icon===icon?palette.primary:"transparent"}`,background:nw.icon===icon?palette.primaryLight:"#FAF8F9",fontSize:22,cursor:"pointer",display:"flex",alignItems:"center",justifyContent:"center"}}>
+                {icon}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <Inp label="Name" value={nw.name} placeholder="e.g. Wise Card, Cash EUR…" onChange={v=>setNw(p=>({...p,name:v}))}/>
+        <Inp label="Type" value={nw.type} opts={WALLET_TYPES} onChange={v=>setNw(p=>({...p,type:v}))}/>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+          <Inp label="Currency" value={nw.currency} opts={CURRENCIES_ALL} onChange={v=>setNw(p=>({...p,currency:v}))}/>
+          {(nw.type==="cash"||nw.type==="debit"||nw.type==="travel")
+            ? <Inp label="Starting Balance" type="number" value={nw.balance} placeholder="0.00" onChange={v=>setNw(p=>({...p,balance:v}))}/>
+            : nw.type==="credit"
+            ? <Inp label="Credit Limit" type="number" value={nw.creditLimit} placeholder="0.00" onChange={v=>setNw(p=>({...p,creditLimit:v}))}/>
+            : <div/>
+          }
+        </div>
+        <Inp label="Notes (optional)" value={nw.notes} placeholder="e.g. Mastercard ending 1234" onChange={v=>setNw(p=>({...p,notes:v}))} multi rows={2}/>
+
+        <div style={{display:"flex",gap:8}}>
+          <button onClick={saveWallet} disabled={!nw.name.trim()}
+            style={{flex:1,background:nw.name.trim()?palette.primary:"#D0C8CA",color:"#fff",border:"none",borderRadius:12,padding:"13px 0",fontSize:14,fontWeight:700,cursor:nw.name.trim()?"pointer":"not-allowed"}}>
+            {editWalletId?"Save Changes":"Add Wallet"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // ── DESKTOP layout ────────────────────────────────────────────
+  const DesktopLayout = () => (
+    <div>
+      <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20}}>
+        <div>
+          <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Finances</h2>
+          <p style={{color:palette.muted,fontSize:13,margin:0}}>{expenses.length} expense{expenses.length!==1?"s":""} · {fmtMoney(totalSpent,baseCurrency)} total spent</p>
+        </div>
+        <button onClick={()=>{ setNe(blankExp()); setEditExpId(null); setShowAddExp(true); }}
+          style={{display:"flex",alignItems:"center",gap:8,background:palette.primary,color:"#fff",border:"none",borderRadius:12,padding:"11px 20px",fontSize:14,fontWeight:700,cursor:"pointer",boxShadow:`0 4px 16px ${palette.primary}44`}}>
+          <Plus size={16}/>Add Expense
+        </button>
+      </div>
+      <div style={{display:"grid",gridTemplateColumns:"300px 1fr 320px",gap:16,alignItems:"start"}}>
+        {/* Col 1: summary + wallets */}
+        <div>
+          {/* Budget */}
+          <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px",marginBottom:14}}>
+            <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Budget</p>
+            <div style={{display:"flex",gap:8,marginBottom:12}}>
+              <input type="number" value={budget.amount||""} onChange={e=>onUpdate("budget",{...budget,amount:e.target.value})} placeholder="Set budget"
+                style={{flex:1,border:`1px solid ${palette.border}`,borderRadius:10,padding:"8px 10px",fontSize:13,fontFamily:"inherit",outline:"none",background:"#FAF8F9",color:palette.text}}/>
+              <select value={budget.currency||baseCurrency} onChange={e=>onUpdate("budget",{...budget,currency:e.target.value})}
+                style={{width:76,border:`1px solid ${palette.border}`,borderRadius:10,padding:"8px",fontSize:12,fontFamily:"inherit",outline:"none",background:"#FAF8F9",color:palette.text}}>
+                {CURRENCIES_ALL.map(c=><option key={c}>{c}</option>)}
+              </select>
+            </div>
+            {budgetAmt>0&&(()=>{
+              const pct=Math.min(100,Math.round((totalSpent/budgetAmt)*100));const over=totalSpent>budgetAmt;
+              return <>
+                <div style={{height:8,background:"#F5F0F2",borderRadius:99,overflow:"hidden",marginBottom:6}}><div style={{height:"100%",width:`${pct}%`,background:over?"#E05C5C":`linear-gradient(90deg,${palette.primary},${palette.accent})`,borderRadius:99,transition:"width 0.4s"}}/></div>
+                <div style={{display:"flex",justifyContent:"space-between",fontSize:11}}>
+                  <span style={{color:palette.muted}}>Spent: <strong style={{color:over?"#E05C5C":palette.text}}>{fmtMoney(totalSpent,budget.currency)}</strong></span>
+                  <span style={{color:over?"#E05C5C":palette.muted,fontWeight:700}}>{over?"Over!":pct+"%"}</span>
+                </div>
+              </>;
+            })()}
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginTop:12}}>
+              {[["💸","Spent",fmtMoney(totalSpent,baseCurrency)],["📅","Daily avg",fmtMoney(dailyAvg,baseCurrency)],["💰","Left",budgetAmt>0?fmtMoney(Math.max(0,remaining),budget.currency):"—"],["🧾","Txns",expenses.length]].map(([icon,label,val])=>(
+                <div key={label} style={{background:"#FAF8F9",borderRadius:10,padding:"10px"}}>
+                  <div style={{fontSize:16,marginBottom:2}}>{icon}</div>
+                  <div style={{fontSize:13,fontWeight:800,color:palette.text}}>{val}</div>
+                  <div style={{fontSize:10,color:palette.muted,fontWeight:600}}>{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          {/* Wallets */}
+          <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px",marginBottom:14}}>
+            <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+              <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:0}}>Wallets</p>
+              <button onClick={()=>{ setNw(blankWallet()); setEditWalletId(null); setShowAddWallet(true); }} style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:8,padding:"4px 10px",fontSize:11,fontWeight:700,cursor:"pointer"}}><Plus size={11}/> Add</button>
+            </div>
+            {wallets.map(w=>{
+              const wData=byWallet.find(x=>x.id===w.id)||{spent:0};const isCredit=w.type==="credit";
               return (
-                <div key={trip.id} style={{background:"#fff",borderRadius:20,border:"1px solid #EDE5E7",marginBottom:12,boxShadow:"0 2px 14px rgba(0,0,0,0.05)",overflow:"hidden",transition:"transform 0.15s"}} onMouseEnter={e=>e.currentTarget.style.transform="translateY(-2px)"} onMouseLeave={e=>e.currentTarget.style.transform="none"}>
-                  {/* Boarding pass top strip */}
-                  <div style={{height:3,background:`linear-gradient(90deg,${palette.primary},${palette.accent})`}}/>
-                  <div onClick={()=>onSelect(trip.id)} style={{padding:"16px 20px",cursor:"pointer"}}>
-                    <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:8}}>
-                      <div>
-                        <h3 style={{fontSize:17,fontWeight:700,color:"#2D2426",margin:"0 0 3px",fontFamily:"'Playfair Display',Georgia,serif"}}>{trip.tripName}</h3>
-                        <p style={{fontSize:12,color:"#9A8F92",margin:0}}>{fmtDateShort(trip.startDate)} — {fmtDateShort(trip.endDate)}</p>
-                      </div>
-                      <span style={{background:st.bg,color:st.color,fontSize:10,fontWeight:800,padding:"4px 10px",borderRadius:99,flexShrink:0}}>{st.label}</span>
-                    </div>
-                    <div style={{display:"flex",gap:6,flexWrap:"wrap",marginBottom:8}}>
-                      {cities.slice(0,5).map(c=><span key={c} style={{background:cityColor(c)+"20",color:cityColor(c),fontSize:11,fontWeight:700,padding:"2px 9px",borderRadius:99}}>{c}</span>)}
-                      {cities.length>5&&<span style={{fontSize:11,color:"#9A8F92"}}>+{cities.length-5}</span>}
-                    </div>
-                    <div style={{display:"flex",gap:12,flexWrap:"wrap"}}>
-                      {trip.itinerary.length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>📅 {trip.itinerary.length} days</span>}
-                      {(trip.memories||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>📸 {trip.memories.length}</span>}
-                      {(trip.expenses||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>💸 {trip.expenses.length} expenses</span>}
-                      {(trip.places||[]).length>0&&<span style={{fontSize:12,color:"#9A8F92"}}>🗺️ {trip.places.length} places</span>}
-                    </div>
+                <div key={w.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",padding:"8px 0",borderBottom:`1px solid ${palette.border}`}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8}}>
+                    <span style={{fontSize:20}}>{w.icon}</span>
+                    <div><p style={{fontSize:12,fontWeight:700,color:palette.text,margin:0}}>{w.name}</p><p style={{fontSize:10,color:palette.muted,margin:0}}>{w.currency}</p></div>
                   </div>
-                  {/* Tear line + delete */}
-                  <div style={{margin:"0",height:0,borderTop:"1.5px dashed #EDE5E7",position:"relative"}}>
-                    <div style={{position:"absolute",left:-8,top:-8,width:16,height:16,borderRadius:"50%",background:"linear-gradient(160deg,#FAF7F8,#F2DDE1)"}}/>
-                    <div style={{position:"absolute",right:-8,top:-8,width:16,height:16,borderRadius:"50%",background:"linear-gradient(160deg,#FAF7F8,#F2DDE1)"}}/>
-                  </div>
-                  <div style={{padding:"10px 20px",display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-                    <span style={{fontSize:11,color:"#9A8F92"}}>Tap card to open →</span>
-                    <button onClick={e=>{e.stopPropagation();setDelId(trip.id);}} style={{display:"flex",alignItems:"center",gap:5,background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:8,padding:"6px 12px",fontSize:12,fontWeight:700,cursor:"pointer"}}>
-                      <Trash2 size={12}/>Delete
-                    </button>
+                  <div style={{textAlign:"right",display:"flex",gap:6,alignItems:"center"}}>
+                    <div>{isCredit
+                      ?<><p style={{fontSize:12,fontWeight:700,color:"#E05C5C",margin:0}}>{fmtMoney(wData.spent,w.currency)}</p><p style={{fontSize:10,color:palette.muted,margin:0}}>due</p></>
+                      :<><p style={{fontSize:12,fontWeight:700,color:palette.text,margin:0}}>{fmtMoney(w.balance,w.currency)}</p><p style={{fontSize:10,color:palette.muted,margin:0}}>balance</p></>
+                    }</div>
+                    <button onClick={()=>{ setNw({...w,balance:String(w.balance),creditLimit:String(w.creditLimit||"")}); setEditWalletId(w.id); setShowAddWallet(true); }} style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:7,padding:"4px 7px",cursor:"pointer",fontSize:10}}><Edit3 size={10}/></button>
                   </div>
                 </div>
               );
             })}
-          </>
-        )}
+          </div>
+          {/* Category breakdown */}
+          {byCat.length>0&&(
+            <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px"}}>
+              <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>By Category</p>
+              {byCat.slice(0,6).map(cat=>{const pct=totalSpent>0?Math.round((cat.total/totalSpent)*100):0;return(
+                <div key={cat.id} style={{marginBottom:8}}>
+                  <div style={{display:"flex",justifyContent:"space-between",marginBottom:3}}>
+                    <span style={{fontSize:12,color:palette.text}}>{cat.emoji} {cat.label}</span>
+                    <span style={{fontSize:12,fontWeight:700,color:palette.text}}>{fmtMoney(cat.total,baseCurrency)}</span>
+                  </div>
+                  <div style={{height:5,background:"#F5F0F2",borderRadius:99,overflow:"hidden"}}><div style={{height:"100%",width:`${pct}%`,background:cat.color,borderRadius:99}}/></div>
+                </div>
+              );})}
+            </div>
+          )}
+        </div>
+
+        {/* Col 2: charts */}
+        <div>
+          <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px",marginBottom:14}}>
+            <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 14px"}}>Spending Trend (Last 14 Days)</p>
+            <MiniBar data={byDay} palette={palette} height={120}/>
+          </div>
+          {byCat.length>0&&(
+            <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px",marginBottom:14}}>
+              <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 14px"}}>Spending by Category</p>
+              <div style={{display:"flex",alignItems:"center",gap:24}}>
+                <DonutChart data={byCat.map(c=>({value:c.total,color:c.color,label:c.label}))} palette={palette} size={130}/>
+                <div style={{flex:1}}>
+                  {byCat.map(cat=>(
+                    <div key={cat.id} style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:8}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}><div style={{width:10,height:10,borderRadius:"50%",background:cat.color}}/><span style={{fontSize:12,color:palette.text}}>{cat.emoji} {cat.label}</span></div>
+                      <span style={{fontSize:12,fontWeight:700,color:palette.text}}>{fmtMoney(cat.total,baseCurrency)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          {/* Export */}
+          {expenses.length>0&&(
+            <div style={{background:"#fff",borderRadius:18,border:`1px solid ${palette.border}`,padding:"16px"}}>
+              <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:"0 0 10px"}}>Export</p>
+              <div style={{display:"flex",gap:8}}>
+                <button onClick={exportCSV} style={{flex:1,background:"#DFF0E1",color:"#3A6B42",border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>📄 CSV</button>
+                <button onClick={exportXLSX} style={{flex:1,background:"#E3EDF5",color:"#2A567A",border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>📊 Excel</button>
+                <button onClick={exportJSON} style={{flex:1,background:"#EEE8F8",color:"#5B4C8A",border:"none",borderRadius:10,padding:"10px 0",fontSize:12,fontWeight:700,cursor:"pointer"}}>🔗 JSON</button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Col 3: transactions */}
+        <div>
+          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:10}}>
+            <p style={{fontSize:11,fontWeight:800,color:palette.muted,textTransform:"uppercase",letterSpacing:"0.06em",margin:0}}>Transactions ({filtered.length})</p>
+          </div>
+          <div style={{display:"flex",gap:6,marginBottom:8}}>
+            <div style={{display:"flex",alignItems:"center",flex:1,background:"#fff",border:`1px solid ${palette.border}`,borderRadius:10,padding:"0 10px"}}>
+              <Search size={12} color={palette.muted}/><input value={search} onChange={e=>setSearch(e.target.value)} placeholder="Search…" style={{flex:1,border:"none",outline:"none",padding:"8px 6px",fontSize:12,fontFamily:"inherit",background:"transparent",color:palette.text}}/>
+            </div>
+            <select value={filterCat} onChange={e=>setFilterCat(e.target.value)} style={{border:`1px solid ${palette.border}`,borderRadius:10,padding:"6px 8px",fontSize:11,fontFamily:"inherit",outline:"none",background:"#fff",color:palette.text}}>
+              <option value="all">All cats</option>
+              {categories.map(c=><option key={c.id} value={c.id}>{c.emoji}</option>)}
+            </select>
+            <select value={filterWallet} onChange={e=>setFilterWallet(e.target.value)} style={{border:`1px solid ${palette.border}`,borderRadius:10,padding:"6px 8px",fontSize:11,fontFamily:"inherit",outline:"none",background:"#fff",color:palette.text}}>
+              <option value="all">All</option>
+              {wallets.map(w=><option key={w.id} value={w.id}>{w.icon}</option>)}
+            </select>
+          </div>
+          <div style={{maxHeight:600,overflowY:"auto"}}>
+            {filtered.length===0&&<div style={{textAlign:"center",padding:"30px 0",color:palette.muted}}><p style={{fontSize:13}}>No transactions</p></div>}
+            {filtered.map(e=>{
+              const cat=categories.find(c=>c.id===e.categoryId)||{emoji:"📦",color:"#9A8F92",label:"Other"};
+              const w=wallets.find(w=>w.id===e.walletId);
+              return (
+                <div key={e.id} style={{display:"flex",alignItems:"flex-start",gap:8,padding:"10px 12px",background:"#fff",borderRadius:12,border:`1px solid ${palette.border}`,marginBottom:6}}>
+                  <div style={{width:32,height:32,borderRadius:9,background:cat.color+"22",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>{cat.emoji}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:12,fontWeight:700,color:palette.text,margin:"0 0 1px",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{e.description}</p>
+                    <p style={{fontSize:10,color:palette.muted,margin:0}}>{e.date}{w?" · "+w.icon:""}{e.location?" · "+e.location:""}</p>
+                  </div>
+                  <div style={{textAlign:"right",flexShrink:0}}>
+                    <p style={{fontSize:13,fontWeight:800,color:palette.text,margin:"0 0 3px"}}>{fmtMoney(e.amount,e.currency)}</p>
+                    <div style={{display:"flex",gap:3}}>
+                      <button onClick={()=>{ setNe({...e,amount:String(e.amount),convertedAmount:String(e.convertedAmount||e.amount)}); setEditExpId(e.id); setShowAddExp(true); }} style={{background:palette.primaryLight,color:palette.primary,border:"none",borderRadius:6,padding:"2px 6px",fontSize:10,cursor:"pointer"}}><Edit3 size={9}/></button>
+                      <button onClick={()=>setDelExpId(e.id)} style={{background:"#FDE8E8",color:"#9B2020",border:"none",borderRadius:6,padding:"2px 6px",fontSize:10,cursor:"pointer"}}><Trash2 size={9}/></button>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       </div>
     </div>
   );
-}
 
-// ══════════════════════════════════════════════════════════════
-// SETTINGS VIEW
-// ══════════════════════════════════════════════════════════════
+  // ── MOBILE layout ─────────────────────────────────────────────
+  const MobileLayout = () => {
+    const TABS=[{id:"overview",l:"Overview",Icon:Home},{id:"transactions",l:"Transactions",Icon:Search},{id:"wallets",l:"Wallets",Icon:Hotel},{id:"analytics",l:"Analytics",Icon:Star}];
+    return (
+      <div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div>
+            <h2 style={{fontFamily:"'Playfair Display',serif",fontSize:24,fontWeight:700,color:palette.text,margin:"0 0 4px"}}>Finances</h2>
+            <p style={{color:palette.muted,fontSize:13,margin:0}}>{fmtMoney(totalSpent,baseCurrency)} spent</p>
+          </div>
+        </div>
+        {/* Sub-nav tabs */}
+        <div style={{display:"flex",gap:6,marginBottom:16,overflowX:"auto",paddingBottom:2}}>
+          {TABS.map(t=>(
+            <button key={t.id} onClick={()=>setTab(t.id)} style={{flexShrink:0,display:"flex",alignItems:"center",gap:5,padding:"8px 14px",borderRadius:99,border:"none",fontSize:12,fontWeight:700,cursor:"pointer",background:tab===t.id?palette.primary:palette.primaryLight,color:tab===t.id?"#fff":palette.primary}}>
+              <t.Icon size={13}/>{t.l}
+            </button>
+          ))}
+        </div>
+        {tab==="overview"&&<OverviewSection/>}
+        {tab==="transactions"&&<TransactionsSection/>}
+        {tab==="wallets"&&<WalletsSection/>}
+        {tab==="analytics"&&<AnalyticsSection/>}
+      </div>
+    );
+  };
+
+  // ── Render ─────────────────────────────────────────────────────
+  return (
+    <div style={{padding:"20px 16px 40px",position:"relative"}}>
+      {delExpId&&<Confirm message="Delete this expense?" onOk={()=>deleteExpense(delExpId)} onNo={()=>setDelExpId(null)}/>}
+      {delWalletId&&<Confirm message="Delete this wallet? Expense records will remain." onOk={()=>deleteWallet(delWalletId)} onNo={()=>setDelWalletId(null)}/>}
+      {showAddExp&&<AddExpenseForm/>}
+      {showAddWallet&&<AddWalletForm/>}
+
+      {/* Responsive: desktop vs mobile */}
+      <style>{`.fin-desktop{display:none}.fin-mobile{display:block}@media(min-width:900px){.fin-desktop{display:block}.fin-mobile{display:none}}`}</style>
+      <div className="fin-desktop"><DesktopLayout/></div>
+      <div className="fin-mobile"><MobileLayout/></div>
+
+      {/* Floating + button (mobile only) */}
+      <style>{`@media(min-width:900px){.fin-fab{display:none!important}}`}</style>
+      <button className="fin-fab" onClick={()=>{ setNe(blankExp()); setEditExpId(null); setShowAddExp(true); }}
+        style={{position:"fixed",bottom:90,right:20,width:56,height:56,borderRadius:"50%",background:`linear-gradient(135deg,${palette.primary},${palette.accent})`,color:"#fff",border:"none",fontSize:28,cursor:"pointer",boxShadow:`0 6px 24px ${palette.primary}66`,display:"flex",alignItems:"center",justifyContent:"center",zIndex:100}}>
+        <Plus size={24}/>
+      </button>
+    </div>
+  );
+}
 function SettingsView({ trip, palette, paletteName, setPaletteName, onUpdate, onReset, onImportNew }) {
   const [edit,setEdit]=useState(false);
   const [tn,setTn]=useState(trip.tripName);
