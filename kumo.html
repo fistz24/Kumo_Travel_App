@@ -1,0 +1,1137 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kumo — Your Travel Archive</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0F0E17;--sf:#1A1928;--sf2:#222136;--sf3:#2A2940;--bd:rgba(255,255,255,0.07);--bd2:rgba(255,255,255,0.12);--tx:#FFFCF5;--tx2:rgba(255,252,245,0.6);--tx3:rgba(255,252,245,0.35);--ac:#6B63E8;--acs:rgba(107,99,232,0.15);--am:#F4A535;--ams:rgba(244,165,53,0.12);--gn:#52C478;--gns:rgba(82,196,120,0.12);--rd:#E8635A;--rds:rgba(232,99,90,0.12);--r:12px;--rs:8px;--fd:'Playfair Display',serif;--fb:'Inter',sans-serif}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--tx);font-family:var(--fb);height:100vh;display:flex;overflow:hidden}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--sf3);border-radius:2px}
+
+/* SIDEBAR */
+.sb{width:224px;min-width:224px;background:var(--sf);border-right:1px solid var(--bd);display:flex;flex-direction:column;height:100vh;overflow:hidden}
+.sb-logo{padding:18px 16px 13px;border-bottom:1px solid var(--bd)}
+.logo{font-family:var(--fd);font-size:21px;font-weight:600;letter-spacing:-.5px}.logo span{color:var(--ac)}
+.logo-s{font-size:10px;color:var(--tx3);margin-top:1px;text-transform:uppercase;letter-spacing:.06em}
+.sb-sec{padding:10px 8px 3px}
+.sb-lbl{font-size:9.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin-bottom:5px}
+.tb{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--rs);cursor:pointer;transition:background .15s;margin-bottom:2px;width:100%;background:none;border:none;text-align:left}
+.tb:hover{background:var(--sf2)}.tb.on{background:var(--acs)}
+.tdot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.tn{font-size:12.5px;color:var(--tx2);flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb.on .tn{color:var(--tx);font-weight:500}
+.tpill{font-size:9px;padding:1px 6px;border-radius:99px;flex-shrink:0}
+.sb-nav{padding:6px 8px;flex:1;overflow-y:auto}
+.nb{display:flex;align-items:center;gap:8px;padding:7px 9px;border-radius:var(--rs);cursor:pointer;transition:background .15s;margin-bottom:1px;width:100%;background:none;border:none;text-align:left}
+.nb:hover{background:var(--sf2)}.nb.on{background:var(--acs)}
+.ni{font-size:13px;width:17px;text-align:center;flex-shrink:0}
+.nl{font-size:12.5px;color:var(--tx2)}.nb.on .nl{color:var(--tx);font-weight:500}
+.n-badge{margin-left:auto;background:var(--ac);color:#fff;font-size:9px;padding:1px 5px;border-radius:99px}
+.sb-foot{padding:11px 16px;border-top:1px solid var(--bd);display:flex;align-items:center;gap:8px;flex-shrink:0}
+.avi{width:27px;height:27px;border-radius:50%;background:var(--acs);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--ac);flex-shrink:0}
+.un{font-size:12px;font-weight:500;color:var(--tx)}.us{font-size:10px;color:var(--tx3)}
+
+/* MAIN */
+.main{flex:1;height:100vh;overflow-y:auto;display:flex;flex-direction:column;min-width:0}
+.topbar{padding:13px 24px;border-bottom:1px solid var(--bd);display:flex;align-items:center;justify-content:space-between;background:var(--sf);position:sticky;top:0;z-index:20;flex-shrink:0}
+.tb-l .bc{font-size:10.5px;color:var(--tx3);margin-bottom:1px}
+.tb-l h1{font-family:var(--fd);font-size:16px;font-weight:500}
+.tb-r{display:flex;gap:7px;align-items:center}
+.btn{padding:6px 12px;border-radius:var(--rs);border:1px solid var(--bd2);background:transparent;color:var(--tx2);font-size:12px;font-family:var(--fb);cursor:pointer;transition:all .15s;white-space:nowrap}
+.btn:hover{background:var(--sf2);color:var(--tx)}
+.btn-p{background:var(--ac);border-color:var(--ac);color:#fff}.btn-p:hover{background:#7b74f0;border-color:#7b74f0;color:#fff}
+.btn-g{border-color:transparent}.btn-g:hover{border-color:var(--bd)}
+.content{padding:22px 24px;flex:1}
+
+/* VIEWS */
+.view{display:none}.view.on{display:block}
+.sh{margin-bottom:16px}
+.st{font-family:var(--fd);font-size:21px;font-weight:500;margin-bottom:2px}
+.ss{font-size:12px;color:var(--tx3)}
+
+/* GRIDS */
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:13px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.ga{display:grid;grid-template-columns:repeat(auto-fill,minmax(165px,1fr));gap:11px}
+
+/* CARD */
+.card{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:16px;transition:border-color .15s}
+.card:hover{border-color:var(--bd2)}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.ct{font-size:11.5px;font-weight:500;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em}
+.ca{font-size:11px;color:var(--ac);cursor:pointer;background:none;border:none;font-family:var(--fb)}.ca:hover{text-decoration:underline}
+
+/* HERO */
+.hero{background:linear-gradient(135deg,#1E1C35 0%,#2A2940 100%);border:1px solid var(--bd2);border-radius:var(--r);padding:20px 22px;margin-bottom:14px;position:relative;overflow:hidden}
+.hero::before{content:'';position:absolute;top:-50px;right:-50px;width:200px;height:200px;border-radius:50%;background:radial-gradient(circle,rgba(107,99,232,.18) 0%,transparent 70%)}
+.ht{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:13px}
+.htitle{font-family:var(--fd);font-size:23px;font-weight:600;line-height:1.2}
+.hmeta{font-size:12px;color:var(--tx2);margin-top:3px}
+.cd{background:var(--acs);border:1px solid rgba(107,99,232,.35);padding:7px 11px;border-radius:var(--rs);text-align:center;flex-shrink:0}
+.cdn{font-family:var(--fd);font-size:21px;font-weight:600;color:var(--ac)}
+.cdl{font-size:9px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em}
+.hstats{display:grid;grid-template-columns:repeat(4,1fr);gap:9px}
+.hs{background:rgba(255,255,255,.04);border-radius:var(--rs);padding:10px 12px}
+.hsv{font-size:16px;font-weight:600}.hsl{font-size:10px;color:var(--tx3);margin-top:2px}
+
+/* ROWS */
+.rows{display:flex;flex-direction:column;gap:1px}
+.row{display:flex;align-items:center;gap:10px;padding:8px 9px;border-radius:var(--rs);cursor:pointer;transition:background .1s}
+.row:hover{background:var(--sf2)}
+.ri{width:30px;height:30px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.rb{flex:1;min-width:0}
+.rn{font-size:13px;font-weight:500;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rs2{font-size:10.5px;color:var(--tx3);margin-top:1px}
+
+/* FULL LIST */
+.fl{display:flex;flex-direction:column;gap:8px}
+.fc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:12px 15px;display:flex;align-items:center;gap:12px;cursor:pointer;transition:all .15s}
+.fc:hover{border-color:var(--bd2);transform:translateY(-1px)}
+.fi2{width:38px;height:38px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.fb{flex:1;min-width:0}
+.fn{font-size:13px;font-weight:500;color:var(--tx);margin-bottom:2px}
+.fsub{font-size:11px;color:var(--tx3)}
+.fr{text-align:right;flex-shrink:0}
+.fv{font-size:13px;font-weight:500;color:var(--tx)}
+.fh{font-size:10px;color:var(--tx3);margin-top:2px}
+
+/* PILLS */
+.pill{font-size:9.5px;padding:2px 7px;border-radius:99px;display:inline-block}
+.p-pl{background:var(--sf3);color:var(--tx3)}.p-up{background:var(--acs);color:#8B84F0}
+.p-on{background:var(--gns);color:var(--gn)}.p-dn{background:rgba(255,252,245,.06);color:var(--tx3)}
+.p-fo{background:var(--ams);color:var(--am)}.p-tr{background:var(--acs);color:#8B84F0}
+.p-at{background:var(--gns);color:var(--gn)}.p-ho{background:var(--rds);color:var(--rd)}
+.p-wi{background:rgba(255,255,255,.06);color:var(--tx3)}
+.stars{color:var(--am);font-size:11px;letter-spacing:1px}
+
+/* BUDGET BARS */
+.bb{margin-bottom:8px}
+.bbl{display:flex;justify-content:space-between;font-size:11.5px;color:var(--tx2);margin-bottom:3px}
+.bbt{height:5px;background:var(--sf3);border-radius:99px;overflow:hidden}
+.bbf{height:100%;border-radius:99px;transition:width .5s ease}
+
+/* MEMORY GRID */
+.mg{display:grid;grid-template-columns:repeat(3,1fr);gap:4px}
+.mt{aspect-ratio:1;border-radius:var(--rs);overflow:hidden;cursor:pointer;position:relative;background:var(--sf3)}
+.mb{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:22px}
+.mo{position:absolute;inset:0;background:rgba(15,14,23,.75);display:flex;flex-direction:column;align-items:center;justify-content:center;opacity:0;transition:opacity .2s}
+.mt:hover .mo{opacity:1}
+.mo-e{font-size:17px}.mo-r{font-size:10px;color:var(--am);margin-top:2px}
+
+/* JOURNAL */
+.je{padding:10px 0;border-bottom:1px solid var(--bd)}.je:last-child{border-bottom:none}
+.jeh{display:flex;gap:9px;align-items:flex-start;margin-bottom:4px}
+.jed{font-size:10.5px;color:var(--tx3);white-space:nowrap;margin-top:2px;min-width:34px}
+.jet{font-family:var(--fd);font-size:13px;font-style:italic;color:var(--tx)}
+.jeb{font-size:12px;color:var(--tx2);line-height:1.7}
+.jer{color:var(--am);font-size:10px;margin-top:3px}
+
+/* FUTURE ME */
+.fm{background:var(--ams);border:1px solid rgba(244,165,53,.2);border-radius:var(--rs);padding:9px 11px;margin-bottom:6px}
+.fm:last-child{margin-bottom:0}
+.fmh{display:flex;align-items:center;gap:5px;margin-bottom:3px}
+.fmf{font-size:9.5px;color:var(--am);text-transform:uppercase;letter-spacing:.05em}
+.fmt{font-size:12px;color:var(--tx2);line-height:1.6;font-style:italic}
+
+/* STAMPS */
+.srow{display:flex;flex-wrap:wrap;gap:6px}
+.stmp{width:48px;height:48px;border-radius:50%;border:2px dashed var(--bd2);display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.stmp.e{border-style:solid;border-color:var(--bd2);background:var(--sf2)}.stmp.e:hover{transform:scale(1.1);border-color:var(--ac)}
+.sf2{font-size:17px}.sl{font-size:7px;color:var(--tx3);text-align:center;margin-top:1px;line-height:1.1}.stmp.e .sl{color:var(--tx2)}
+.sink{position:absolute;inset:0;border-radius:50%;background:var(--ac);opacity:0;transform:scale(0);transition:all .25s;display:flex;align-items:center;justify-content:center;font-size:17px}
+.stmp.press .sink{opacity:.9;transform:scale(1)}
+
+/* PASSPORT */
+.ppc{background:linear-gradient(135deg,#1E1C35,#2A2940);border:1px solid var(--bd2);border-radius:var(--r);padding:24px;margin-bottom:16px;text-align:center;position:relative;overflow:hidden}
+.ppc::before{content:'✦';position:absolute;font-size:90px;color:rgba(255,255,255,.015);top:-10px;left:-10px;pointer-events:none}
+.ppt{font-family:var(--fd);font-size:17px;font-weight:600}
+.pps{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.08em;margin-top:2px}
+.ppn{font-size:10.5px;color:var(--tx3);margin-top:7px;font-family:monospace;letter-spacing:.1em}
+.ppsr{display:flex;justify-content:center;gap:26px;margin-top:11px}
+.ppsv{font-size:19px;font-weight:600;color:var(--ac);font-family:var(--fd)}
+.ppsl{font-size:9.5px;color:var(--tx3)}
+.sc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--rs);padding:11px 7px;text-align:center;cursor:pointer;transition:all .2s}
+.sc:hover{border-color:var(--bd2);transform:scale(1.03)}.sc.lk{opacity:.35;cursor:default}.sc.lk:hover{transform:none}
+.sce{font-size:24px;margin-bottom:3px}.scn{font-size:10.5px;font-weight:500;color:var(--tx)}.scc{font-size:9px;color:var(--tx3);margin-top:1px}
+.ac2{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:14px;text-align:center;transition:border-color .15s}
+.ac2:hover{border-color:var(--bd2)}.ac2.lk{opacity:.35}
+.ai{font-size:24px;margin-bottom:5px}.an{font-size:12.5px;font-weight:500;color:var(--tx);margin-bottom:2px}.as{font-size:11px;color:var(--tx3)}
+
+/* DOCS */
+.dc{background:var(--sf);border:1px solid var(--bd);border-radius:var(--r);padding:12px;display:flex;align-items:center;gap:11px;cursor:pointer;transition:all .15s}
+.dc:hover{border-color:var(--bd2);transform:translateY(-1px)}
+.di{width:36px;height:36px;border-radius:var(--rs);display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.dn{font-size:12.5px;font-weight:500;color:var(--tx);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dm{font-size:10.5px;color:var(--tx3);margin-top:1px}.dz{font-size:10.5px;color:var(--tx3)}
+
+/* ROUTES */
+.rst{display:flex;gap:11px;margin-bottom:0}
+.rlw{display:flex;flex-direction:column;align-items:center}
+.rd2{width:9px;height:9px;border-radius:50%;background:var(--ac);flex-shrink:0;margin-top:4px}
+.rd2.end{background:var(--rd)}
+.rseg{width:2px;flex:1;min-height:28px;background:linear-gradient(to bottom,var(--ac),var(--rd));margin:3px 0;opacity:.3}
+.rc{flex:1;padding-bottom:14px}
+.rp{font-size:13px;font-weight:500;color:var(--tx)}.rsub{font-size:10.5px;color:var(--tx3);margin-top:2px}
+.rb2{display:inline-flex;align-items:center;gap:3px;background:var(--sf2);border:1px solid var(--bd);border-radius:99px;padding:2px 9px;font-size:10.5px;color:var(--tx2);margin-top:5px}
+
+/* TABS */
+.tabs{display:flex;gap:3px;background:var(--sf2);border-radius:var(--rs);padding:3px;margin-bottom:14px}
+.tab{flex:1;padding:6px;border-radius:6px;font-size:11.5px;text-align:center;cursor:pointer;color:var(--tx3);transition:all .15s;border:none;background:transparent;font-family:var(--fb)}
+.tab.on{background:var(--sf);color:var(--tx);font-weight:500}
+
+/* FINANCE */
+.ei{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)}.ei:last-child{border-bottom:none}
+.ed{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.en{font-size:13px;color:var(--tx)}.et{font-size:10px;color:var(--tx3)}
+.ea{font-size:13.5px;font-weight:500;color:var(--tx)}
+
+/* WRAPPED */
+.wc{background:linear-gradient(135deg,#1E1C35 0%,rgba(107,99,232,.12) 50%,#2A2940 100%);border:1px solid var(--bd2);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:18px;position:relative;overflow:hidden}
+.wc::before{content:'🌟';position:absolute;font-size:80px;opacity:.04;top:-10px;right:20px;pointer-events:none}
+.wb{display:inline-block;background:var(--acs);border:1px solid rgba(107,99,232,.4);border-radius:99px;padding:3px 11px;font-size:9.5px;color:var(--ac);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px}
+.wt{font-family:var(--fd);font-size:24px;font-weight:600;margin-bottom:5px}
+.ws{font-size:13px;color:var(--tx2)}
+.wstats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:18px}
+.wst{background:rgba(255,255,255,.04);border-radius:var(--rs);padding:12px;text-align:center}
+.wsv{font-family:var(--fd);font-size:20px;font-weight:600;color:var(--ac)}.wsl{font-size:9.5px;color:var(--tx3);margin-top:2px}
+
+/* MODAL */
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;padding:16px}
+.ov.open{display:flex}
+.modal{background:var(--sf);border:1px solid var(--bd2);border-radius:var(--r);padding:24px;max-width:450px;width:100%;max-height:90vh;overflow-y:auto;position:relative;animation:mIn .2s ease}
+@keyframes mIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+.mc{position:absolute;top:13px;right:13px;background:var(--sf2);border:1px solid var(--bd);color:var(--tx2);width:25px;height:25px;border-radius:50%;cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;font-family:var(--fb)}.mc:hover{color:var(--tx)}
+.mt2{font-family:var(--fd);font-size:17px;font-weight:500;margin-bottom:16px}
+.fg{margin-bottom:13px}
+.fl2{font-size:10.5px;color:var(--tx2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px;display:block}
+.fi3,.fse,.fta{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:8px 11px;font-size:12.5px;color:var(--tx);font-family:var(--fb);outline:none;transition:border .15s;-webkit-appearance:none}
+.fi3::placeholder,.fta::placeholder{color:var(--tx3)}
+.fi3:focus,.fse:focus,.fta:focus{border-color:var(--ac)}
+.fse option{background:var(--sf2)}
+.fta{resize:vertical;min-height:76px;line-height:1.6}
+.fr2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.srat{display:flex;gap:3px;flex-direction:row-reverse;justify-content:flex-end}
+.srat input{display:none}.srat label{font-size:21px;color:var(--sf3);cursor:pointer;transition:color .1s}
+.srat input:checked~label,.srat label:hover,.srat label:hover~label{color:var(--am)}
+.fb2{display:flex;gap:7px;justify-content:flex-end;margin-top:4px}
+
+/* SEARCH */
+.swrap{position:relative;margin-bottom:16px}
+.sinp{width:100%;background:var(--sf2);border:1px solid var(--bd);border-radius:var(--rs);padding:9px 13px 9px 35px;font-size:13px;color:var(--tx);font-family:var(--fb);outline:none;transition:border .15s}
+.sinp::placeholder{color:var(--tx3)}.sinp:focus{border-color:var(--ac)}
+.sico{position:absolute;left:11px;top:50%;transform:translateY(-50%);font-size:13px;color:var(--tx3);pointer-events:none}
+.sres{background:var(--sf);border:1px solid var(--bd2);border-radius:var(--r);overflow:hidden}
+.sri{padding:9px 13px;display:flex;align-items:center;gap:9px;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--bd)}
+.sri:last-child{border-bottom:none}.sri:hover{background:var(--sf2)}
+.srt{font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.04em;width:58px;flex-shrink:0}
+.srn{font-size:13px;color:var(--tx)}.srs{font-size:10.5px;color:var(--tx3)}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;background:var(--sf);border:1px solid var(--bd2);border-radius:var(--rs);padding:10px 15px;font-size:13px;color:var(--tx);z-index:300;animation:tIn .2s ease;box-shadow:0 4px 20px rgba(0,0,0,.4);display:none}
+@keyframes tIn{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+
+/* DIVIDER */
+.div{height:1px;background:var(--bd);margin:16px 0}
+
+@media(max-width:900px){.g3{grid-template-columns:1fr 1fr}.hstats{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:640px){.g3,.g2{grid-template-columns:1fr}.sb{width:56px;min-width:56px}.tn,.nl,.sb-lbl,.sb-foot .us,.sb-foot .un,.sb-logo .logo-s{display:none}}
+</style>
+</head>
+<body>
+
+<aside class="sb">
+  <div class="sb-logo">
+    <div class="logo">Ku<span>mo</span></div>
+    <div class="logo-s">Travel Archive</div>
+  </div>
+  <div class="sb-sec">
+    <div class="sb-lbl">My Trips</div>
+    <button class="tb on" onclick="selTrip('japan',this)"><div class="tdot" style="background:#6B63E8"></div><span class="tn">Japan Autumn 2026</span><span class="tpill p-up">Soon</span></button>
+    <button class="tb" onclick="selTrip('bali',this)"><div class="tdot" style="background:#52C478"></div><span class="tn">Bali Escape</span><span class="tpill p-dn">Done</span></button>
+    <button class="tb" onclick="selTrip('korea',this)"><div class="tdot" style="background:#F4A535"></div><span class="tn">Korea Spring 2027</span><span class="tpill p-pl">Plan</span></button>
+    <button class="tb" onclick="om('new-trip')"><div class="tdot" style="background:var(--bd2)"></div><span class="tn" style="color:var(--tx3)">+ New trip</span></button>
+  </div>
+  <div class="sb-nav">
+    <div class="sb-lbl" style="margin-top:7px">Navigate</div>
+    <button class="nb on" onclick="sv('dashboard',this)"><span class="ni">🏠</span><span class="nl">Dashboard</span></button>
+    <button class="nb" onclick="sv('itinerary',this)"><span class="ni">📅</span><span class="nl">Itinerary</span></button>
+    <button class="nb" onclick="sv('places',this)"><span class="ni">📍</span><span class="nl">Places</span><span class="n-badge">47</span></button>
+    <button class="nb" onclick="sv('stays',this)"><span class="ni">🏨</span><span class="nl">Stays</span></button>
+    <button class="nb" onclick="sv('transport',this)"><span class="ni">🚄</span><span class="nl">Transport</span></button>
+    <button class="nb" onclick="sv('routes',this)"><span class="ni">🗺</span><span class="nl">Routes</span></button>
+    <button class="nb" onclick="sv('finance',this)"><span class="ni">💰</span><span class="nl">Finance</span></button>
+    <button class="nb" onclick="sv('docs',this)"><span class="ni">📂</span><span class="nl">Documents</span></button>
+    <button class="nb" onclick="sv('memories',this)"><span class="ni">📸</span><span class="nl">Memories</span></button>
+    <button class="nb" onclick="sv('journal',this)"><span class="ni">📖</span><span class="nl">Journal</span></button>
+    <button class="nb" onclick="sv('passport',this)"><span class="ni">🎖</span><span class="nl">Passport</span></button>
+    <button class="nb" onclick="sv('wrapped',this)"><span class="ni">🎁</span><span class="nl">Wrapped</span></button>
+    <button class="nb" onclick="sv('search',this)"><span class="ni">🔍</span><span class="nl">Search</span></button>
+    <button class="nb" onclick="sv('settings',this)"><span class="ni">⚙️</span><span class="nl">Settings</span></button>
+    </div>
+  <div class="sb-foot">
+    <div class="avi">AK</div>
+    <div><div class="un">Arya K.</div><div class="us">12 trips · 6 countries</div></div>
+  </div>
+</aside>
+
+<main class="main">
+  <div class="topbar">
+    <div class="tb-l">
+      <div class="bc" id="bc">Japan Autumn 2026</div>
+      <h1 id="ptitle">Trip Overview</h1>
+    </div>
+    <div class="tb-r">
+      <button class="btn btn-g" onclick="sv('search',gnb('search'))">🔍 Search</button>
+      <button class="btn" id="add-btn" onclick="hAdd()">+ Add</button>
+      <button class="btn btn-p" id="pri-btn" onclick="hPri()">View Itinerary</button>
+    </div>
+  </div>
+
+  <div class="content">
+
+<!-- ══ DASHBOARD ══ -->
+<div id="view-dashboard" class="view on">
+  <div class="hero">
+    <div class="ht">
+      <div>
+        <div class="htitle" id="htitle">Japan Autumn 2026</div>
+        <div class="hmeta" id="hmeta">🗾 Tokyo · Kyoto · Osaka · Nara &nbsp;·&nbsp; Oct 12 – Nov 2, 2026</div>
+      </div>
+      <div class="cd"><div class="cdn" id="cdn">—</div><div class="cdl">Days Away</div></div>
+    </div>
+    <div class="hstats">
+      <div class="hs"><div class="hsv">22</div><div class="hsl">Days planned</div></div>
+      <div class="hs"><div class="hsv">47</div><div class="hsl">Places saved</div></div>
+      <div class="hs"><div class="hsv">¥420k</div><div class="hsl">Budget</div></div>
+      <div class="hs"><div class="hsv">4</div><div class="hsl">Hotels booked</div></div>
+    </div>
+  </div>
+
+
+      <!-- Weather + quick info strip -->
+      <div style="display:flex;gap:10px;margin-bottom:13px;flex-wrap:wrap">
+        <div class="card" style="flex:1;min-width:160px;display:flex;align-items:center;gap:12px;padding:12px 16px">
+          <div style="font-size:26px">🌤</div>
+          <div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Tokyo weather</div>
+            <div style="font-size:16px;font-weight:600;color:var(--tx)">22°C</div>
+            <div style="font-size:10px;color:var(--tx3)">Partly cloudy · Oct 14</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;min-width:160px;display:flex;align-items:center;gap:12px;padding:12px 16px">
+          <div style="font-size:26px">⏰</div>
+          <div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Next reservation</div>
+            <div style="font-size:13px;font-weight:500;color:var(--tx)">Sushi Saito</div>
+            <div style="font-size:10px;color:var(--tx3)">Oct 13 · 18:00 · Roppongi</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;min-width:160px;display:flex;align-items:center;gap:12px;padding:12px 16px">
+          <div style="font-size:26px">💴</div>
+          <div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:2px">Daily budget left</div>
+            <div style="font-size:16px;font-weight:600;color:var(--gn)">¥8,400</div>
+            <div style="font-size:10px;color:var(--tx3)">of ¥12,000 today</div>
+          </div>
+        </div>
+        <div class="card" style="flex:1;min-width:160px;display:flex;align-items:center;gap:12px;padding:12px 16px" onclick="sv('passport',gnb('passport'))">
+          <div style="font-size:26px">🎖</div>
+          <div>
+            <div style="font-size:11px;color:var(--tx3);margin-bottom:2px">New achievement</div>
+            <div style="font-size:13px;font-weight:500;color:var(--am)">Ramen Lover 🍜</div>
+            <div style="font-size:10px;color:var(--tx3)">Unlocked today!</div>
+          </div>
+        </div>
+      </div>
+  <div class="g3" style="margin-bottom:13px">
+    <div class="card">
+      <div class="ch"><span class="ct">Itinerary</span><button class="ca" onclick="sv('itinerary',gnb('itinerary'))">View all →</button></div>
+      <div style="margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--ac);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:#fff;flex-shrink:0">1</div>
+          <div><div style="font-size:12.5px;font-weight:500;color:var(--tx)">Day 1 — Tokyo Arrival</div><div style="font-size:10px;color:var(--tx3)">Shinjuku</div></div>
+        </div>
+        <div style="padding-left:32px;display:flex;flex-direction:column;gap:4px">
+          <div class="row" style="padding:5px 7px"><span style="font-size:10px;color:var(--tx3);width:30px">14:00</span><span style="width:5px;height:5px;border-radius:50%;background:#6B63E8;flex-shrink:0"></span><span style="font-size:12px;color:var(--tx2);flex:1">Check-in · Park Hyatt</span><span class="pill p-ho">Hotel</span></div>
+          <div class="row" style="padding:5px 7px"><span style="font-size:10px;color:var(--tx3);width:30px">18:30</span><span style="width:5px;height:5px;border-radius:50%;background:#F4A535;flex-shrink:0"></span><span style="font-size:12px;color:var(--tx2);flex:1">Ichiran Ramen</span><span class="pill p-fo">Food</span></div>
+        </div>
+      </div>
+      <div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:7px">
+          <div style="width:24px;height:24px;border-radius:50%;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:600;color:var(--tx2);flex-shrink:0">2</div>
+          <div><div style="font-size:12.5px;font-weight:500;color:var(--tx)">Day 2 — Harajuku</div><div style="font-size:10px;color:var(--tx3)">Tokyo</div></div>
+        </div>
+        <div style="padding-left:32px;display:flex;flex-direction:column;gap:4px">
+          <div class="row" style="padding:5px 7px"><span style="font-size:10px;color:var(--tx3);width:30px">09:00</span><span style="width:5px;height:5px;border-radius:50%;background:#52C478;flex-shrink:0"></span><span style="font-size:12px;color:var(--tx2);flex:1">Meiji Jingu Shrine</span><span class="pill p-at">Attr.</span></div>
+          <div class="row" style="padding:5px 7px"><span style="font-size:10px;color:var(--tx3);width:30px">14:00</span><span style="width:5px;height:5px;border-radius:50%;background:#F4A535;flex-shrink:0"></span><span style="font-size:12px;color:var(--tx2);flex:1">Takeshita Street</span><span class="pill p-fo">Shop</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Saved Places</span><button class="ca" onclick="sv('places',gnb('places'))">View all →</button></div>
+      <div class="rows">
+        <div class="row" onclick="opd('ichiran')"><div class="ri" style="background:var(--ams)">🍜</div><div class="rb"><div class="rn">Ichiran Ramen</div><div class="rs2">Ramen · Shibuya</div></div><span class="pill p-up">Planned</span></div>
+        <div class="row" onclick="opd('inari')"><div class="ri" style="background:var(--gns)">⛩️</div><div class="rb"><div class="rn">Fushimi Inari</div><div class="rs2">Shrine · Kyoto</div></div><span class="pill p-on">Visited</span></div>
+        <div class="row" onclick="opd('arabica')"><div class="ri" style="background:var(--acs)">☕</div><div class="rb"><div class="rn">% Arabica</div><div class="rs2">Café · Arashiyama</div></div><span class="pill p-wi">Wishlist</span></div>
+        <div class="row" onclick="opd('saito')"><div class="ri" style="background:var(--rds)">🍣</div><div class="rb"><div class="rn">Sushi Saito</div><div class="rs2">Omakase · Tokyo</div></div><span class="pill p-on">Reserved</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Budget</span><button class="ca" onclick="sv('finance',gnb('finance'))">Details →</button></div>
+      <div class="bb"><div class="bbl"><span>Accommodation</span><span>¥160k/¥180k</span></div><div class="bbt"><div class="bbf" style="width:89%;background:#6B63E8"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Food</span><span>¥45k/¥80k</span></div><div class="bbt"><div class="bbf" style="width:56%;background:#F4A535"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Transport</span><span>¥28k/¥60k</span></div><div class="bbt"><div class="bbf" style="width:47%;background:#52C478"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Activities</span><span>¥12k/¥50k</span></div><div class="bbt"><div class="bbf" style="width:24%;background:#E8635A"></div></div></div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:9px;border-top:1px solid var(--bd);margin-top:4px">
+        <span style="font-size:11px;color:var(--tx3)">Total spent</span>
+        <span style="font-family:var(--fd);font-size:17px;font-weight:600">¥245k<span style="font-size:11px;color:var(--tx3);font-family:var(--fb)">/¥420k</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Memories</span><button class="ca" onclick="sv('memories',gnb('memories'))">View all →</button></div>
+      <div class="mg">
+        <div class="mt" onclick="om2('inari')"><div class="mb">⛩️</div><div class="mo"><div class="mo-e">⛩️</div><div class="mo-r">★★★★★</div></div></div>
+        <div class="mt" onclick="om2('ramen')"><div class="mb">🍜</div><div class="mo"><div class="mo-e">🍜</div><div class="mo-r">★★★★★</div></div></div>
+        <div class="mt" onclick="om2('bamboo')"><div class="mb">🌿</div><div class="mo"><div class="mo-e">🌿</div><div class="mo-r">★★★★☆</div></div></div>
+        <div class="mt" onclick="om2('market')"><div class="mb">🏮</div><div class="mo"><div class="mo-e">🏮</div><div class="mo-r">★★★★☆</div></div></div>
+        <div class="mt" onclick="om2('deer')"><div class="mb">🦌</div><div class="mo"><div class="mo-e">🦌</div><div class="mo-r">★★★★★</div></div></div>
+        <div class="mt" style="background:var(--sf2);display:flex;align-items:center;justify-content:center;cursor:pointer" onclick="sv('memories',gnb('memories'))"><span style="font-size:10.5px;color:var(--tx3)">+18</span></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Journal</span><button class="ca" onclick="sv('journal',gnb('journal'))">Read →</button></div>
+      <div class="je" style="padding-top:0"><div class="jeh"><div class="jed">Day 3</div><div class="jet">Fushimi Inari at dawn</div></div><div class="jeb">Arrived before sunrise. The torii gates glow orange in the early light. Absolutely worth waking up at 4:30 AM.</div><div class="jer">★★★★★</div></div>
+      <div class="je"><div class="jeh"><div class="jed">Day 5</div><div class="jet">Lost in Nishiki Market</div></div><div class="jeb">Tasted everything. The tamagoyaki here is extraordinary. Go hungry — this is a full meal in 400m.</div><div class="jer">★★★★☆</div></div>
+      <div class="je"><div class="jeh"><div class="jed">Day 6</div><div class="jet">The deer have no respect</div></div><div class="jeb">One ate my train ticket stub. Todai-ji made me feel genuinely small for the first time in years.</div><div class="jer">★★★★★</div></div>
+    </div>
+
+    <div class="card">
+      <div class="ch"><span class="ct">Future-Me Notes</span><button class="ca" onclick="om('add-fm')">+ Add</button></div>
+      <div id="fm-list">
+        <div class="fm"><div class="fmh"><span>💌</span><span class="fmf">From Bali trip</span></div><div class="fmt">"Book Sushi Saito 3 months minimum. The waitlist is brutal."</div></div>
+        <div class="fm"><div class="fmh"><span>💌</span><span class="fmf">From Bali trip</span></div><div class="fmt">"Get Suica the moment you land. Don't waste time at ticket machines."</div></div>
+        <div class="fm"><div class="fmh"><span>💌</span><span class="fmf">Yourself · Now</span></div><div class="fmt">"Kyoto needs 4 days, not 2. Don't rush it."</div></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="ch"><span class="ct">Passport Stamps</span><button class="ca" onclick="sv('passport',gnb('passport'))">Full passport →</button></div>
+    <div class="srow">
+      <div class="stmp e" onclick="ps(this)"><div class="sf2">🇯🇵</div><div class="sl">Japan</div><div class="sink">🇯🇵</div></div>
+      <div class="stmp e" onclick="ps(this)"><div class="sf2">🇮🇩</div><div class="sl">Indonesia</div><div class="sink">🇮🇩</div></div>
+      <div class="stmp e" onclick="ps(this)"><div class="sf2">🇹🇭</div><div class="sl">Thailand</div><div class="sink">🇹🇭</div></div>
+      <div class="stmp e" onclick="ps(this)"><div class="sf2">🇸🇬</div><div class="sl">Singapore</div><div class="sink">🇸🇬</div></div>
+      <div class="stmp e" onclick="ps(this)"><div class="sf2">🇲🇾</div><div class="sl">Malaysia</div><div class="sink">🇲🇾</div></div>
+      <div class="stmp"><div class="sf2" style="font-size:13px;opacity:.3">🇰🇷</div><div class="sl">Korea</div></div>
+      <div class="stmp"><div class="sf2" style="font-size:13px;opacity:.3">🇹🇼</div><div class="sl">Taiwan</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ SEARCH ══ -->
+<div id="view-search" class="view">
+  <div class="sh"><div class="st">Search</div><div class="ss">Search across your entire travel archive</div></div>
+  <div class="swrap"><span class="sico">🔍</span><input class="sinp" id="sinp" type="text" placeholder="Places, memories, expenses, notes…" oninput="doSearch(this.value)"></div>
+  <div id="sres-wrap"></div>
+</div>
+
+<!-- ══ ITINERARY ══ -->
+<div id="view-itinerary" class="view">
+  <div class="sh"><div class="st">Itinerary</div><div class="ss">Japan Autumn 2026 · 22 days · Oct 12 – Nov 2</div></div>
+  <div class="tabs">
+    <button class="tab on" onclick="stab(this)">Timeline</button>
+    <button class="tab" onclick="stab(this)">Calendar</button>
+    <button class="tab" onclick="stab(this)">Today</button>
+  </div>
+  <div class="fl">
+    <div class="fc"><div class="fi2" style="background:rgba(107,99,232,.1)">✈️</div><div class="fb"><div class="fn">Day 1 — Tokyo Arrival</div><div class="fsub">Oct 12 · Shinjuku · Park Hyatt, Ichiran Ramen, Shinjuku night walk</div></div><div class="fr"><span class="pill p-on">Done</span></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--gns)">🏯</div><div class="fb"><div class="fn">Day 2 — Harajuku & Meiji</div><div class="fsub">Oct 13 · Harajuku · Meiji Shrine, Takeshita St, Omotesando</div></div><div class="fr"><span class="pill p-on">Done</span></div></div>
+    <div class="fc" style="border-color:var(--ac)"><div class="fi2" style="background:var(--acs)">🌅</div><div class="fb"><div class="fn">Day 3 — Kyoto Transfer</div><div class="fsub">Oct 14 · Shinkansen to Kyoto · Fushimi Inari at dawn</div></div><div class="fr"><span class="pill p-up">Today</span></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--ams)">🍜</div><div class="fb"><div class="fn">Day 4 — Kyoto Food Day</div><div class="fsub">Oct 15 · Kyoto · Nishiki Market, Pontocho, sake tasting, Kinkaku-ji</div></div><div class="fr"><span class="pill p-pl">Planned</span></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--gns)">🦌</div><div class="fb"><div class="fn">Day 5 — Nara Day Trip</div><div class="fsub">Oct 16 · Nara · Deer park, Todai-ji, Kasuga Taisha</div></div><div class="fr"><span class="pill p-pl">Planned</span></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--rds)">♨️</div><div class="fb"><div class="fn">Days 6–7 — Hakone Onsen</div><div class="fsub">Oct 17–18 · Hakone · Onsen ryokan, Mt Fuji views, hot spring</div></div><div class="fr"><span class="pill p-pl">Planned</span></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--ams)">🌿</div><div class="fb"><div class="fn">Day 8 — Arashiyama</div><div class="fsub">Oct 19 · Arashiyama · Bamboo Grove, % Arabica, Tenryu-ji garden</div></div><div class="fr"><span class="pill p-pl">Planned</span></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--gns)">🌆</div><div class="fb"><div class="fn">Days 9–10 — Osaka</div><div class="fsub">Oct 20–21 · Osaka · Dotonbori, Kuromon Market, Okonomiyaki</div></div><div class="fr"><span class="pill p-pl">Planned</span></div></div>
+    <div class="fc"><div class="fi2" style="background:rgba(107,99,232,.1)">✈️</div><div class="fb"><div class="fn">Day 22 — Departure</div><div class="fsub">Nov 2 · Narita · GA881 SUB dep 20:30</div></div><div class="fr"><span class="pill p-pl">Planned</span></div></div>
+  </div>
+</div>
+
+<!-- ══ PLACES ══ -->
+<div id="view-places" class="view">
+  <div class="sh"><div class="st">Places</div><div class="ss">47 saved · 12 visited · 8 wishlist</div></div>
+  <div class="tabs">
+    <button class="tab on" onclick="fp('all',this)">All (47)</button>
+    <button class="tab" onclick="fp('visited',this)">Visited</button>
+    <button class="tab" onclick="fp('planned',this)">Planned</button>
+    <button class="tab" onclick="fp('wishlist',this)">Wishlist</button>
+  </div>
+  <div class="fl" id="places-list">
+    <div class="fc" data-s="visited" onclick="opd('inari')"><div class="fi2" style="background:var(--gns)">⛩️</div><div class="fb"><div class="fn">Fushimi Inari Taisha</div><div class="fsub">Shrine · Fushimi, Kyoto · Go before 7am · Free</div></div><div class="fr"><span class="pill p-on">Visited</span><div class="fh stars">★★★★★</div></div></div>
+    <div class="fc" data-s="visited" onclick="opd('nishiki')"><div class="fi2" style="background:var(--ams)">🏮</div><div class="fb"><div class="fn">Nishiki Market</div><div class="fsub">Market · Downtown Kyoto · 400-year-old market street</div></div><div class="fr"><span class="pill p-on">Visited</span><div class="fh stars">★★★★☆</div></div></div>
+    <div class="fc" data-s="planned" onclick="opd('ichiran')"><div class="fi2" style="background:var(--ams)">🍜</div><div class="fb"><div class="fn">Ichiran Ramen Shibuya</div><div class="fsub">Ramen · Shibuya, Tokyo · Open 24hr · ¥1,200</div></div><div class="fr"><span class="pill p-up">Planned</span></div></div>
+    <div class="fc" data-s="reserved" onclick="opd('saito')"><div class="fi2" style="background:var(--rds)">🍣</div><div class="fb"><div class="fn">Sushi Saito</div><div class="fsub">Omakase · Roppongi, Tokyo · Reservation confirmed</div></div><div class="fr"><span class="pill p-on">Reserved</span><div class="fh">¥30,000</div></div></div>
+    <div class="fc" data-s="planned" onclick="opd('bamboo')"><div class="fi2" style="background:var(--gns)">🌿</div><div class="fb"><div class="fn">Arashiyama Bamboo Grove</div><div class="fsub">Nature · Arashiyama, Kyoto · Free · Go before 8am</div></div><div class="fr"><span class="pill p-up">Planned</span></div></div>
+    <div class="fc" data-s="wishlist" onclick="opd('arabica')"><div class="fi2" style="background:var(--acs)">☕</div><div class="fb"><div class="fn">% Arabica Arashiyama</div><div class="fsub">Café · Arashiyama, Kyoto · Bamboo grove view · ¥700</div></div><div class="fr"><span class="pill p-wi">Wishlist</span></div></div>
+    <div class="fc" data-s="planned" onclick="opd('dotonbori')"><div class="fi2" style="background:var(--rds)">🌆</div><div class="fb"><div class="fn">Dotonbori Canal</div><div class="fsub">Nightlife · Namba, Osaka · Best at night · Free</div></div><div class="fr"><span class="pill p-up">Planned</span></div></div>
+    <div class="fc" data-s="wishlist" onclick="opd('tsujiri')"><div class="fi2" style="background:var(--gns)">🍵</div><div class="fb"><div class="fn">Tsujiri Matcha Café</div><div class="fsub">Matcha · Gion, Kyoto · Famous parfait · ¥1,400</div></div><div class="fr"><span class="pill p-wi">Wishlist</span></div></div>
+  </div>
+</div>
+
+<!-- ══ STAYS ══ -->
+<div id="view-stays" class="view">
+  <div class="sh"><div class="st">Stays</div><div class="ss">4 hotels booked · ¥262,000 total</div></div>
+  <div class="fl">
+    <div class="fc" onclick="om('stay1')"><div class="fi2" style="background:var(--acs)">🏨</div><div class="fb"><div class="fn">Park Hyatt Tokyo</div><div class="fsub">Oct 12–14 · Shinjuku · 2 nights · Conf# PHT-849201</div></div><div class="fr"><div class="fv">¥82,000</div><div class="fh"><span class="pill p-on">Confirmed</span></div></div></div>
+    <div class="fc" onclick="om('stay2')"><div class="fi2" style="background:var(--ams)">🏯</div><div class="fb"><div class="fn">Nishiyama Onsen Keiunkan</div><div class="fsub">Oct 15–17 · Yamanashi · 2 nights · World's oldest hotel (718 AD)</div></div><div class="fr"><div class="fv">¥48,000</div><div class="fh"><span class="pill p-on">Confirmed</span></div></div></div>
+    <div class="fc" onclick="om('stay3')"><div class="fi2" style="background:var(--gns)">🍵</div><div class="fb"><div class="fn">The Hiiragiya Ryokan</div><div class="fsub">Oct 17–21 · Kyoto · 4 nights · Traditional tatami · Founded 1818</div></div><div class="fr"><div class="fv">¥96,000</div><div class="fh"><span class="pill p-on">Confirmed</span></div></div></div>
+    <div class="fc" onclick="om('stay4')"><div class="fi2" style="background:var(--rds)">🌆</div><div class="fb"><div class="fn">Cross Hotel Osaka</div><div class="fsub">Oct 21–24 · Osaka Namba · 3 nights · City center</div></div><div class="fr"><div class="fv">¥36,000</div><div class="fh"><span class="pill p-up">Pending</span></div></div></div>
+  </div>
+</div>
+
+<!-- ══ TRANSPORT ══ -->
+<div id="view-transport" class="view">
+  <div class="sh"><div class="st">Transport</div><div class="ss">Flights, trains &amp; transfers</div></div>
+  <div class="tabs"><button class="tab on" onclick="stab(this)">All</button><button class="tab" onclick="stab(this)">Flights</button><button class="tab" onclick="stab(this)">Trains</button></div>
+  <div class="fl">
+    <div class="fc"><div class="fi2" style="background:rgba(107,99,232,.1)">✈️</div><div class="fb"><div class="fn">GA 880 — Surabaya (SUB) → Tokyo Narita (NRT)</div><div class="fsub">Oct 12 · Dep 08:30 · Arr 19:45 · Seat 24A · Conf# GA8841JT</div></div><div class="fr"><div class="fv">¥62,000</div><div class="fh"><span class="pill p-on">Confirmed</span></div></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--gns)">🚄</div><div class="fb"><div class="fn">Shinkansen Hikari 513 — Tokyo → Kyoto</div><div class="fsub">Oct 14 · 09:00 → 11:28 · Car 12, Seat C · JR Pass covered</div></div><div class="fr"><div class="fv">Covered</div><div class="fh"><span class="pill p-on">Confirmed</span></div></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--ams)">🚌</div><div class="fb"><div class="fn">Highway Bus — Kyoto → Hakone</div><div class="fsub">Oct 16 · 13:30 · 3hr 40min · Willer Express</div></div><div class="fr"><div class="fv">¥3,200</div><div class="fh"><span class="pill p-up">Booked</span></div></div></div>
+    <div class="fc"><div class="fi2" style="background:var(--gns)">🚄</div><div class="fb"><div class="fn">Shinkansen Sakura 551 — Kyoto → Osaka</div><div class="fsub">Oct 21 · 14:00 · 15 min · JR Pass covered</div></div><div class="fr"><div class="fv">Covered</div><div class="fh"><span class="pill p-pl">Planned</span></div></div></div>
+    <div class="fc"><div class="fi2" style="background:rgba(107,99,232,.1)">✈️</div><div class="fb"><div class="fn">GA 881 — Tokyo Narita (NRT) → Surabaya (SUB)</div><div class="fsub">Nov 2 · Dep 20:30 · Arr 05:15+1 · Seat 22F · Conf# GA8841RT</div></div><div class="fr"><div class="fv">¥58,000</div><div class="fh"><span class="pill p-on">Confirmed</span></div></div></div>
+  </div>
+</div>
+
+<!-- ══ ROUTES ══ -->
+<div id="view-routes" class="view">
+  <div class="sh"><div class="st">Routes</div><div class="ss">Day plans and optimized walking routes</div></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ch"><span class="ct">Kyoto Day 1</span><button class="ca" onclick="toast('🗺 Map export coming soon!')">Export map</button></div>
+      <div style="background:var(--sf2);border-radius:var(--rs);height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:13px;font-size:24px;border:1px solid var(--bd)">🗺</div>
+      <div>
+        <div class="rst"><div class="rlw"><div class="rd2"></div><div class="rseg"></div></div><div class="rc"><div class="rp">Hiiragiya Ryokan</div><div class="rsub">Start · 08:00</div><div class="rb2">🚶 4 min walk</div></div></div>
+        <div class="rst"><div class="rlw"><div class="rd2"></div><div class="rseg"></div></div><div class="rc"><div class="rp">Nishiki Market</div><div class="rsub">08:30 – 10:00</div><div class="rb2">🚶 12 min walk</div></div></div>
+        <div class="rst"><div class="rlw"><div class="rd2"></div><div class="rseg"></div></div><div class="rc"><div class="rp">Kinkaku-ji</div><div class="rsub">10:30 – 12:00</div><div class="rb2">🚌 25 min bus</div></div></div>
+        <div class="rst"><div class="rlw"><div class="rd2 end"></div></div><div class="rc"><div class="rp">Pontocho for lunch</div><div class="rsub">12:30 · End</div></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Osaka Night Route</span><button class="ca" onclick="toast('🗺 Map export coming soon!')">Export map</button></div>
+      <div style="background:var(--sf2);border-radius:var(--rs);height:110px;display:flex;align-items:center;justify-content:center;margin-bottom:13px;font-size:24px;border:1px solid var(--bd)">🌃</div>
+      <div>
+        <div class="rst"><div class="rlw"><div class="rd2"></div><div class="rseg"></div></div><div class="rc"><div class="rp">Cross Hotel Osaka</div><div class="rsub">Start · 18:00</div><div class="rb2">🚶 8 min walk</div></div></div>
+        <div class="rst"><div class="rlw"><div class="rd2"></div><div class="rseg"></div></div><div class="rc"><div class="rp">Dotonbori Canal</div><div class="rsub">18:15 – 20:00</div><div class="rb2">🚶 5 min walk</div></div></div>
+        <div class="rst"><div class="rlw"><div class="rd2"></div><div class="rseg"></div></div><div class="rc"><div class="rp">Kuromon Ichiba</div><div class="rsub">20:00 – 21:00</div><div class="rb2">🚶 6 min walk</div></div></div>
+        <div class="rst"><div class="rlw"><div class="rd2 end"></div></div><div class="rc"><div class="rp">Shinsekai for drinks</div><div class="rsub">21:30 · End</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ FINANCE ══ -->
+<div id="view-finance" class="view">
+  <div class="sh"><div class="st">Finance</div><div class="ss">Japan Autumn 2026 · Budget tracking</div></div>
+  <div class="g3" style="margin-bottom:14px">
+    <div class="card" style="text-align:center"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Total Budget</div><div style="font-family:var(--fd);font-size:26px;font-weight:600">¥420,000</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Spent</div><div style="font-family:var(--fd);font-size:26px;font-weight:600;color:var(--am)">¥245,200</div></div>
+    <div class="card" style="text-align:center"><div style="font-size:10.5px;color:var(--tx3);text-transform:uppercase;letter-spacing:.05em;margin-bottom:5px">Remaining</div><div style="font-family:var(--fd);font-size:26px;font-weight:600;color:var(--gn)">¥174,800</div></div>
+  </div>
+  <div class="g2">
+    <div class="card">
+      <div class="ch"><span class="ct">By Category</span></div>
+      <div class="bb"><div class="bbl"><span>Accommodation</span><span style="color:var(--rd)">¥160k/¥180k</span></div><div class="bbt"><div class="bbf" style="width:89%;background:#6B63E8"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Food &amp; Dining</span><span>¥45k/¥80k</span></div><div class="bbt"><div class="bbf" style="width:56%;background:#F4A535"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Transport</span><span>¥28k/¥60k</span></div><div class="bbt"><div class="bbf" style="width:47%;background:#52C478"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Activities</span><span>¥12k/¥50k</span></div><div class="bbt"><div class="bbf" style="width:24%;background:#E8635A"></div></div></div>
+      <div class="bb"><div class="bbl"><span>Shopping</span><span>¥0/¥30k</span></div><div class="bbt"><div class="bbf" style="width:0%;background:#c47cd4"></div></div></div>
+      <div style="padding-top:12px;border-top:1px solid var(--bd);margin-top:4px;display:flex;gap:8px">
+        <button class="btn" style="font-size:11px" onclick="toast('📊 Exporting CSV…')">Export CSV</button>
+        <button class="btn" style="font-size:11px" onclick="toast('📊 Exporting Excel…')">Export Excel</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Expenses</span><button class="ca" onclick="om('add-exp')">+ Add</button></div>
+      <div id="exp-list">
+        <div class="ei"><div class="ed" style="background:#6B63E8"></div><div style="flex:1"><div class="en">Park Hyatt Tokyo</div><div class="et">Oct 12 · Accommodation</div></div><div class="ea">¥82,000</div></div>
+        <div class="ei"><div class="ed" style="background:#F4A535"></div><div style="flex:1"><div class="en">Sushi Saito omakase</div><div class="et">Oct 13 · Food</div></div><div class="ea">¥30,000</div></div>
+        <div class="ei"><div class="ed" style="background:#52C478"></div><div style="flex:1"><div class="en">Shinkansen Tokyo→Kyoto</div><div class="et">Oct 14 · Transport</div></div><div class="ea">¥14,000</div></div>
+        <div class="ei"><div class="ed" style="background:#F4A535"></div><div style="flex:1"><div class="en">Nishiki Market food</div><div class="et">Oct 14 · Food</div></div><div class="ea">¥3,200</div></div>
+        <div class="ei"><div class="ed" style="background:#6B63E8"></div><div style="flex:1"><div class="en">Nishiyama Keiunkan</div><div class="et">Oct 15 · Accommodation</div></div><div class="ea">¥48,000</div></div>
+        <div class="ei"><div class="ed" style="background:#E8635A"></div><div style="flex:1"><div class="en">Fushimi Inari entry</div><div class="et">Oct 14 · Activities</div></div><div class="ea">Free</div></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ DOCUMENTS ══ -->
+<div id="view-docs" class="view">
+  <div class="sh"><div class="st">Documents</div><div class="ss">All travel files · 12 documents</div></div>
+  <div class="tabs"><button class="tab on" onclick="stab(this)">All (12)</button><button class="tab" onclick="stab(this)">Flights</button><button class="tab" onclick="stab(this)">Hotels</button><button class="tab" onclick="stab(this)">Visas</button><button class="tab" onclick="stab(this)">Insurance</button></div>
+  <div class="g2">
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:rgba(107,99,232,.1)">✈️</div><div style="flex:1;min-width:0"><div class="dn">GA880 Boarding Pass SUB→NRT</div><div class="dm">PDF · Oct 12 · Flight</div></div><div class="dz">248 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:rgba(107,99,232,.1)">✈️</div><div style="flex:1;min-width:0"><div class="dn">GA881 Return Itinerary</div><div class="dm">PDF · Nov 2 · Flight</div></div><div class="dz">180 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:var(--acs)">🏨</div><div style="flex:1;min-width:0"><div class="dn">Park Hyatt — Confirmation</div><div class="dm">PDF · Oct 12–14 · Hotel</div></div><div class="dz">92 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:var(--ams)">🏯</div><div style="flex:1;min-width:0"><div class="dn">Hiiragiya Ryokan — Booking</div><div class="dm">PDF · Oct 17–21 · Hotel</div></div><div class="dz">140 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:var(--gns)">🎫</div><div style="flex:1;min-width:0"><div class="dn">JR Pass — 21 Day</div><div class="dm">PDF · Activated Oct 12</div></div><div class="dz">310 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:var(--rds)">🍣</div><div style="flex:1;min-width:0"><div class="dn">Sushi Saito — Reservation</div><div class="dm">PNG · Oct 13 · Restaurant</div></div><div class="dz">55 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:var(--ams)">🛡</div><div style="flex:1;min-width:0"><div class="dn">Travel Insurance Policy</div><div class="dm">PDF · Oct 12 – Nov 4</div></div><div class="dz">420 KB</div></div>
+    <div class="dc" onclick="toast('📄 Opening document…')"><div class="di" style="background:var(--gns)">🪪</div><div style="flex:1;min-width:0"><div class="dn">Japan Visa — Approved</div><div class="dm">PDF · Valid to Jan 2027</div></div><div class="dz">210 KB</div></div>
+  </div>
+</div>
+
+<!-- ══ MEMORIES ══ -->
+<div id="view-memories" class="view">
+  <div class="sh"><div class="st">Memories</div><div class="ss">23 memories · Japan Autumn 2026</div></div>
+  <div class="tabs"><button class="tab on" onclick="stab(this)">Gallery</button><button class="tab" onclick="stab(this)">Timeline</button><button class="tab" onclick="stab(this)">Favorites</button></div>
+  <div class="ga">
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('inari')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">⛩️</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Fushimi Inari at dawn</div><div class="fsub">Day 3 · Kyoto</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('ramen')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🍜</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Best ramen of my life</div><div class="fsub">Day 1 · Tokyo</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('bamboo')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🌿</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Arashiyama morning</div><div class="fsub">Day 8 · Kyoto</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★☆</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('market')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🏮</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Nishiki Market wandering</div><div class="fsub">Day 4 · Kyoto</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★☆</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('deer')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🦌</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Nara deer chaos</div><div class="fsub">Day 5 · Nara</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('onsen')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">♨️</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">First onsen experience</div><div class="fsub">Day 6 · Hakone</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('golden')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🏯</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Kinkaku-ji golden light</div><div class="fsub">Day 4 · Kyoto</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('fuji')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🗻</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Fuji from the train window</div><div class="fsub">Day 7 · En route</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div></div></div>
+    <div class="fc" style="flex-direction:column;padding:0;overflow:hidden;gap:0" onclick="om2('takoyaki')"><div style="height:95px;background:var(--sf3);display:flex;align-items:center;justify-content:center;font-size:34px">🐙</div><div style="padding:9px 11px"><div class="fn" style="font-family:var(--fd);font-style:italic;font-size:12.5px">Dotonbori takoyaki at midnight</div><div class="fsub">Day 9 · Osaka</div><div class="stars" style="margin-top:3px;font-size:10px">★★★★☆</div></div></div>
+  </div>
+</div>
+
+<!-- ══ JOURNAL ══ -->
+<div id="view-journal" class="view">
+  <div class="sh"><div class="st">Travel Journal</div><div class="ss">Japan Autumn 2026 · A story in places</div></div>
+  <div class="card" id="journal-card">
+    <div class="je" style="padding-top:0"><div class="jeh"><div class="jed">Day 1</div><div class="jet">The city that never sleeps but always hums</div></div><div class="jeb">Landed at Narita at 19:45. The humidity was different from Bali — still warm, but lighter. Took the Narita Express and watched Tokyo appear like a constellation rising from the ground. Checked into the Park Hyatt, 52nd floor. The view of Shinjuku at night is something I'll never forget. Everything is precise here. Even the taxi driver wore white gloves.</div><div class="jer">★★★★☆</div></div>
+    <div class="je"><div class="jeh"><div class="jed">Day 3</div><div class="jet">Fushimi Inari before the crowds</div></div><div class="jeb">Alarm at 4:30 AM. No hesitation. Arrived at the base of the shrine as the sky turned from navy to tangerine. The torii gates — thousands of them, stacked impossibly — glowed orange-red in the early light. No tour groups. Just me, a few local joggers, and the sound of wind through cedar trees. I sat at a small fox shrine near the summit and ate a convenience store onigiri. Perfect.</div><div class="jer">★★★★★</div></div>
+    <div class="je"><div class="jeh"><div class="jed">Day 4</div><div class="jet">Nishiki Market and the art of eating while walking</div></div><div class="jeb">The tamagoyaki on a stick is everything. Nishiki Market is 400m of organized food chaos — 400-year-old stalls squeezed into a covered arcade. I went in planning to browse. I left full, carrying pickles, miso candy, and a single chopstick I accidentally bought.</div><div class="jer">★★★★☆</div></div>
+    <div class="je"><div class="jeh"><div class="jed">Day 5</div><div class="jet">The deer do not respect personal space</div></div><div class="jeb">The Nara deer are not the gentle creatures I imagined. They are aggressive, persistent, and absolutely wonderful. One ate my train ticket stub. Another headbutted a child for a cracker. Todai-ji Temple made me feel genuinely small for the first time in years.</div><div class="jer">★★★★★</div></div>
+    <div class="je"><div class="jeh"><div class="jed">Day 6</div><div class="jet">First onsen. Better than advertised.</div></div><div class="jeb">I was nervous. Every part of me wanted to skip it. I didn't. The outdoor bath at Nishiyama Onsen overlooks a cedar gorge. Steam rises. Mountains. Silence. I stayed for 45 minutes and felt like a completely different person walking out. The best ¥1,500 I've ever spent.</div><div class="jer">★★★★★</div></div>
+  </div>
+</div>
+
+<!-- ══ PASSPORT ══ -->
+<div id="view-passport" class="view">
+  <div class="ppc">
+    <div class="ppt">Arya Kusuma</div>
+    <div class="pps">Personal Travel Passport · Est. 2022</div>
+    <div class="ppn">KMO-0042-AK-2022</div>
+    <div class="ppsr">
+      <div><div class="ppsv">6</div><div class="ppsl">Countries</div></div>
+      <div><div class="ppsv">18</div><div class="ppsl">Cities</div></div>
+      <div><div class="ppsv">12</div><div class="ppsl">Trips</div></div>
+      <div><div class="ppsv">23</div><div class="ppsl">Stamps</div></div>
+    </div>
+  </div>
+  <div class="sh" style="margin-bottom:12px"><div class="st" style="font-size:16px">Country Stamps</div></div>
+  <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:9px;margin-bottom:22px">
+    <div class="sc" onclick="psc(this)"><div class="sce">🇯🇵</div><div class="scn">Japan</div><div class="scc">3 visits</div></div>
+    <div class="sc" onclick="psc(this)"><div class="sce">🇮🇩</div><div class="scn">Indonesia</div><div class="scc">Home</div></div>
+    <div class="sc" onclick="psc(this)"><div class="sce">🇹🇭</div><div class="scn">Thailand</div><div class="scc">2 visits</div></div>
+    <div class="sc" onclick="psc(this)"><div class="sce">🇸🇬</div><div class="scn">Singapore</div><div class="scc">1 visit</div></div>
+    <div class="sc" onclick="psc(this)"><div class="sce">🇲🇾</div><div class="scn">Malaysia</div><div class="scc">1 visit</div></div>
+    <div class="sc lk"><div class="sce">🇰🇷</div><div class="scn">Korea</div><div class="scc">2027</div></div>
+    <div class="sc lk"><div class="sce">🇹🇼</div><div class="scn">Taiwan</div><div class="scc">Wishlist</div></div>
+    <div class="sc lk"><div class="sce">🇻🇳</div><div class="scn">Vietnam</div><div class="scc">Wishlist</div></div>
+  </div>
+  <div class="sh" style="margin-bottom:12px"><div class="st" style="font-size:16px">Achievements</div></div>
+  <div class="g3">
+    <div class="ac2"><div class="ai">🍜</div><div class="an">Ramen Lover</div><div class="as">5+ ramen spots visited</div></div>
+    <div class="ac2"><div class="ai">📸</div><div class="an">Memory Keeper</div><div class="as">20+ memories saved</div></div>
+    <div class="ac2"><div class="ai">🏯</div><div class="an">Temple Explorer</div><div class="as">10+ temples visited</div></div>
+    <div class="ac2"><div class="ai">☕</div><div class="an">Café Hunter</div><div class="as">15+ cafés visited</div></div>
+    <div class="ac2"><div class="ai">💌</div><div class="an">Note to Self</div><div class="as">5+ Future-Me notes</div></div>
+    <div class="ac2"><div class="ai">🗺</div><div class="an">City Collector</div><div class="as">18 cities visited</div></div>
+    <div class="ac2 lk"><div class="ai">🌸</div><div class="an">Sakura Chaser</div><div class="as">See cherry blossoms</div></div>
+    <div class="ac2 lk"><div class="ai">✈️</div><div class="an">Frequent Flyer</div><div class="as">15+ trips</div></div>
+    <div class="ac2 lk"><div class="ai">🌏</div><div class="an">World Traveler</div><div class="as">10+ countries</div></div>
+  </div>
+</div>
+
+<!-- ══ WRAPPED ══ -->
+<div id="view-wrapped" class="view">
+  <div class="sh"><div class="st">Travel Wrapped</div><div class="ss">Your year in travel · 2025</div></div>
+  <div class="wc">
+    <div class="wb">2025 Wrapped</div>
+    <div class="wt">What a year, Arya.</div>
+    <div class="ws">You visited 3 countries, explored 9 cities, and saved 67 memories.</div>
+    <div class="wstats">
+      <div class="wst"><div class="wsv">3</div><div class="wsl">Countries</div></div>
+      <div class="wst"><div class="wsv">9</div><div class="wsl">Cities</div></div>
+      <div class="wst"><div class="wsv">67</div><div class="wsl">Memories</div></div>
+      <div class="wst"><div class="wsv">34</div><div class="wsl">Days abroad</div></div>
+      <div class="wst"><div class="wsv">¥3.2M</div><div class="wsl">Total spent</div></div>
+      <div class="wst"><div class="wsv">14,200</div><div class="wsl">km traveled</div></div>
+    </div>
+  </div>
+  <div class="g2" style="margin-bottom:16px">
+    <div class="card">
+      <div class="ch"><span class="ct">Top Memory</span></div>
+      <div style="font-size:30px;margin-bottom:9px">⛩️</div>
+      <div style="font-family:var(--fd);font-size:15px;font-style:italic;margin-bottom:5px">Fushimi Inari at dawn</div>
+      <div style="font-size:11.5px;color:var(--tx2);margin-bottom:6px">Day 3 · Kyoto · Japan</div>
+      <div class="stars">★★★★★</div>
+      <div style="margin-top:9px;font-size:12px;color:var(--tx2);line-height:1.7;font-style:italic">"Arrived before sunrise. The torii gates glow orange. Absolutely worth waking up at 4:30 AM."</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Most Visited City</span></div>
+      <div style="font-size:30px;margin-bottom:9px">⛩️</div>
+      <div style="font-family:var(--fd);font-size:17px;margin-bottom:3px">Kyoto</div>
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">8 days · 14 places · 4 memories</div>
+      <div style="height:1px;background:var(--bd);margin-bottom:10px"></div>
+      <div style="font-size:11px;color:var(--tx3);margin-bottom:3px">Top-rated place</div>
+      <div style="font-size:13px;color:var(--tx)">Fushimi Inari Taisha</div>
+      <div class="stars" style="margin-top:3px;font-size:10px">★★★★★</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Best Meal</span></div>
+      <div style="font-size:30px;margin-bottom:9px">🍣</div>
+      <div style="font-family:var(--fd);font-size:15px;font-style:italic;margin-bottom:3px">Sushi Saito</div>
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Omakase · Tokyo · ¥30,000</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.7;font-style:italic">"Worth every yen. Booked 3 months ahead exactly as my Future-Me note said."</div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Stamps Collected</span></div>
+      <div class="srow" style="justify-content:center;gap:8px;flex-wrap:wrap;padding:8px 0">
+        <div class="stmp e" onclick="ps(this)"><div class="sf2">🇯🇵</div><div class="sl">Japan</div><div class="sink">🇯🇵</div></div>
+        <div class="stmp e" onclick="ps(this)"><div class="sf2">🇮🇩</div><div class="sl">Indonesia</div><div class="sink">🇮🇩</div></div>
+        <div class="stmp e" onclick="ps(this)"><div class="sf2">🇹🇭</div><div class="sl">Thailand</div><div class="sink">🇹🇭</div></div>
+      </div>
+    </div>
+  </div>
+  <div style="display:flex;gap:9px">
+    <button class="btn btn-p" onclick="toast('🎁 Share card exported!')">Export Share Card</button>
+    <button class="btn" onclick="toast('📄 PDF downloading…')">Download PDF</button>
+    <button class="btn" onclick="toast('📤 Shared to Instagram!')">Share</button>
+  </div>
+</div>
+
+
+<!-- ══ SETTINGS ══ -->
+<div id="view-settings" class="view">
+  <div class="sh"><div class="st">Settings</div><div class="ss">Preferences and account</div></div>
+  <div class="g2" style="margin-bottom:14px">
+    <div class="card">
+      <div class="ch"><span class="ct">Appearance</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><div style="font-size:13px;color:var(--tx);margin-bottom:2px">Theme</div><div style="font-size:11px;color:var(--tx3)">Choose your display preference</div></div>
+        <div style="display:flex;gap:5px">
+          <button class="btn" id="btn-dark" onclick="setTheme('dark',this)" style="font-size:11px;background:var(--ac);border-color:var(--ac);color:#fff">Dark</button>
+          <button class="btn" id="btn-light" onclick="setTheme('light',this)" style="font-size:11px">Light</button>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><div style="font-size:13px;color:var(--tx);margin-bottom:2px">Accent color</div><div style="font-size:11px;color:var(--tx3)">Highlight color throughout the app</div></div>
+        <div style="display:flex;gap:6px">
+          <div onclick="setAccent('#6B63E8',this)" style="width:20px;height:20px;border-radius:50%;background:#6B63E8;cursor:pointer;border:2px solid white"></div>
+          <div onclick="setAccent('#E8635A',this)" style="width:20px;height:20px;border-radius:50%;background:#E8635A;cursor:pointer;border:2px solid transparent"></div>
+          <div onclick="setAccent('#52C478',this)" style="width:20px;height:20px;border-radius:50%;background:#52C478;cursor:pointer;border:2px solid transparent"></div>
+          <div onclick="setAccent('#F4A535',this)" style="width:20px;height:20px;border-radius:50%;background:#F4A535;cursor:pointer;border:2px solid transparent"></div>
+          <div onclick="setAccent('#E875A8',this)" style="width:20px;height:20px;border-radius:50%;background:#E875A8;cursor:pointer;border:2px solid transparent"></div>
+        </div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+        <div><div style="font-size:13px;color:var(--tx);margin-bottom:2px">Compact mode</div><div style="font-size:11px;color:var(--tx3)">Denser layout for more content</div></div>
+        <div class="toggle" id="tgl-compact" onclick="toggleSetting(this,'compact')" style="width:36px;height:20px;background:var(--sf3);border-radius:99px;cursor:pointer;position:relative;transition:background .2s"><div style="width:16px;height:16px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;opacity:.6"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Account</span></div>
+      <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div style="width:40px;height:40px;border-radius:50%;background:var(--acs);display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:600;color:var(--ac);flex-shrink:0">AK</div>
+        <div><div style="font-size:13px;font-weight:500;color:var(--tx)">Arya Kusuma</div><div style="font-size:11px;color:var(--tx3)">arya@email.com</div></div>
+        <button class="btn" style="margin-left:auto;font-size:11px" onclick="toast('✏️ Edit profile')">Edit</button>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><div style="font-size:13px;color:var(--tx)">Default currency</div></div>
+        <select class="fse" style="width:auto;padding:5px 9px;font-size:12px"><option>¥ JPY</option><option>$ USD</option><option>€ EUR</option><option>Rp IDR</option></select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><div style="font-size:13px;color:var(--tx)">Home country</div></div>
+        <select class="fse" style="width:auto;padding:5px 9px;font-size:12px"><option>🇮🇩 Indonesia</option><option>🇯🇵 Japan</option><option>🇸🇬 Singapore</option></select>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+        <div><div style="font-size:13px;color:var(--tx)">Member since</div></div>
+        <div style="font-size:12px;color:var(--tx3)">March 2022</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Notifications</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><div style="font-size:13px;color:var(--tx)">Trip reminders</div><div style="font-size:11px;color:var(--tx3)">Alerts before your trips</div></div>
+        <div class="toggle on" id="tgl-remind" onclick="toggleSetting(this,'remind')" style="width:36px;height:20px;background:var(--ac);border-radius:99px;cursor:pointer;position:relative;transition:background .2s"><div style="width:16px;height:16px;background:white;border-radius:50%;position:absolute;top:2px;left:18px;transition:left .2s"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--bd)">
+        <div><div style="font-size:13px;color:var(--tx)">Future-Me surfacing</div><div style="font-size:11px;color:var(--tx3)">Show notes when planning return trips</div></div>
+        <div class="toggle on" id="tgl-fm" onclick="toggleSetting(this,'fm')" style="width:36px;height:20px;background:var(--ac);border-radius:99px;cursor:pointer;position:relative;transition:background .2s"><div style="width:16px;height:16px;background:white;border-radius:50%;position:absolute;top:2px;left:18px;transition:left .2s"></div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 0">
+        <div><div style="font-size:13px;color:var(--tx)">Weekly summary</div><div style="font-size:11px;color:var(--tx3)">Email digest of upcoming plans</div></div>
+        <div class="toggle" id="tgl-weekly" onclick="toggleSetting(this,'weekly')" style="width:36px;height:20px;background:var(--sf3);border-radius:99px;cursor:pointer;position:relative;transition:background .2s"><div style="width:16px;height:16px;background:white;border-radius:50%;position:absolute;top:2px;left:2px;transition:left .2s;opacity:.6"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ch"><span class="ct">Data & Export</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <button class="btn" style="text-align:left;justify-content:flex-start;padding:10px 12px" onclick="toast('📦 Preparing full archive…')">
+          <span style="font-size:16px;margin-right:9px">📦</span>Export Full Archive (JSON)
+        </button>
+        <button class="btn" style="text-align:left;justify-content:flex-start;padding:10px 12px" onclick="toast('💰 Exporting finance data…')">
+          <span style="font-size:16px;margin-right:9px">💰</span>Export Finance Data (CSV)
+        </button>
+        <button class="btn" style="text-align:left;justify-content:flex-start;padding:10px 12px" onclick="toast('📸 Preparing memory archive…')">
+          <span style="font-size:16px;margin-right:9px">📸</span>Export Memory Archive
+        </button>
+        <button class="btn" style="text-align:left;justify-content:flex-start;padding:10px 12px" onclick="toast('📖 Exporting journal as PDF…')">
+          <span style="font-size:16px;margin-right:9px">📖</span>Export Journal (PDF)
+        </button>
+        <div style="height:1px;background:var(--bd);margin:4px 0"></div>
+        <button class="btn" style="text-align:left;justify-content:flex-start;padding:10px 12px;color:var(--rd);border-color:var(--rds)" onclick="toast('⚠️ This would delete all data')">
+          <span style="font-size:16px;margin-right:9px">🗑</span>Delete All Data
+        </button>
+      </div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="ch"><span class="ct">Keyboard Shortcuts</span></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Go to Dashboard</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">G D</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Go to Itinerary</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">G I</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Go to Memories</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">G M</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Go to Finance</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">G F</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Open Search</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">⌘ K</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Add new item</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">N</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Close modal</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">Esc</span></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:7px 10px;background:var(--sf2);border-radius:var(--rs)"><span style="font-size:12px;color:var(--tx2)">Go to Journal</span><span style="font-size:10px;color:var(--tx3);font-family:monospace;background:var(--sf3);padding:2px 7px;border-radius:4px">G J</span></div>
+    </div>
+  </div>
+</div>
+  </div><!-- /content -->
+</main>
+
+<!-- MODAL OVERLAY -->
+<div id="ov" class="ov" onclick="moc(event)">
+  <div class="modal" id="mbox"><button class="mc" onclick="cm()">×</button><div id="mi"></div></div>
+</div>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<script>
+// ── DATA ──
+const MEM={
+  inari:{e:'⛩️',t:'Fushimi Inari at dawn',p:'Fushimi Inari Taisha, Kyoto',d:'Day 3 · Oct 14',r:5,n:'Arrived at 5:15 AM. The gates go on forever — over 10,000. At that hour it\'s almost spiritual. The hike to the summit is optional but genuinely worth it. Sat at a small fox shrine near the top eating a konbini onigiri.',fm:'Go before 6 AM. Bring water. Summit is 90 min up.',ret:true},
+  ramen:{e:'🍜',t:'Best ramen of my life',p:'Ichiran Ramen, Shibuya',d:'Day 1 · Oct 12',r:5,n:'The solo booth concept is genius. You face a curtain and focus entirely on the bowl. Never been so present while eating. The broth is rich, the noodles are firm, the egg is perfect.',fm:'Rich broth + extra noodle. Skip the green onion.',ret:true},
+  bamboo:{e:'🌿',t:'Arashiyama morning',p:'Bamboo Grove, Arashiyama',d:'Day 8 · Oct 19',r:4,n:'Quieter than expected in the early morning. The rustling of 20m bamboo stalks in the wind is unlike anything else. Arrive before 8am before the tour groups come.',fm:'Morning only — afternoon is impossible with crowds.',ret:true},
+  market:{e:'🏮',t:'Nishiki Market wandering',p:'Nishiki Market, Kyoto',d:'Day 4 · Oct 15',r:4,n:'The tamagoyaki on a stick is transcendent. 400m of organized food chaos, 400-year-old stalls in a covered arcade. Went in to browse, left full and carrying too many snacks.',fm:'Go hungry. This is a full meal in 400m.',ret:true},
+  deer:{e:'🦌',t:'Nara deer chaos',p:'Nara Deer Park',d:'Day 5 · Oct 16',r:5,n:'These deer have no respect for personal boundaries and I loved every second. One ate my ticket stub. Another headbutted a child for a cracker. Todai-ji is genuinely humbling.',fm:'Buy crackers outside the park — cheaper. Guard your map.',ret:true},
+  onsen:{e:'♨️',t:'First onsen experience',p:'Nishiyama Onsen, Hakone',d:'Day 6 · Oct 17',r:5,n:'The outdoor bath overlooks a cedar gorge. Steam, mountains, silence. Stayed 45 minutes and felt like a completely different person. The best ¥1,500 I have ever spent.',fm:'Evening is better than morning. Steam + dark sky + mountains.',ret:true},
+  golden:{e:'🏯',t:'Kinkaku-ji golden light',p:'Kinkaku-ji Temple, Kyoto',d:'Day 4 · Oct 15',r:5,n:'The gold pavilion reflected in the still pond, framed by sculpted pines. Arrived at 4:30pm when the light turns warm. Crowds are heavy but the scene absorbs them.',fm:'4:30pm for golden hour. Arrive 10 min before closing rush.',ret:true},
+  fuji:{e:'🗻',t:'Fuji from the train window',p:'Shinkansen, en route',d:'Day 7 · Oct 17',r:5,n:'You catch Fuji for maybe 30 seconds if you\'re on the right side. I was. Perfect snow cap. Wasn\'t expecting to feel that much about a mountain.',fm:'Sit right side going Tokyo→Kyoto direction. Camera ready.',ret:true},
+  takoyaki:{e:'🐙',t:'Dotonbori takoyaki at midnight',p:'Dotonbori, Osaka',d:'Day 9 · Oct 20',r:4,n:'Too hot, too good. Stood at a counter at midnight eating takoyaki fresh from the iron with three strangers who didn\'t share a language. That\'s Osaka.',fm:'The ones near the Glico sign are touristy. Walk two blocks.',ret:true},
+};
+const PLC={
+  ichiran:{e:'🍜',n:'Ichiran Ramen Shibuya',c:'Ramen',a:'Shibuya, Tokyo',h:'Open 24hr',pr:'¥1,200',no:'Solo booth system — face a curtain and focus entirely on the bowl.',s:'Planned',r:null},
+  inari:{e:'⛩️',n:'Fushimi Inari Taisha',c:'Shrine',a:'Fushimi, Kyoto',h:'Always open',pr:'Free',no:'10,000 torii gates. Go before 7am.',s:'Visited',r:5},
+  arabica:{e:'☕',n:'% Arabica Arashiyama',c:'Specialty Café',a:'Arashiyama, Kyoto',h:'8am–6pm',pr:'¥700',no:'Bamboo grove view from terrace. Queue up to 45 min.',s:'Wishlist',r:null},
+  saito:{e:'🍣',n:'Sushi Saito',c:'Omakase',a:'Roppongi, Tokyo',h:'12pm–2pm, 6pm–10pm',pr:'¥30,000',no:'Book 3 months ahead. Reservation confirmed.',s:'Reserved',r:null},
+  bamboo:{e:'🌿',n:'Arashiyama Bamboo Grove',c:'Nature',a:'Arashiyama, Kyoto',h:'Always open',pr:'Free',no:'Go before 8am — crowds arrive fast.',s:'Planned',r:null},
+  nishiki:{e:'🏮',n:'Nishiki Market',c:'Market',a:'Downtown Kyoto',h:'9am–6pm',pr:'Free entry',no:'400 year old covered market street. Go hungry.',s:'Visited',r:4},
+  dotonbori:{e:'🌆',n:'Dotonbori Canal',c:'Nightlife',a:'Namba, Osaka',h:'Always open',pr:'Free',no:'Best at night. Walk the full canal strip.',s:'Planned',r:null},
+  tsujiri:{e:'🍵',n:'Tsujiri Matcha Café',c:'Matcha',a:'Gion, Kyoto',h:'11am–8pm',pr:'¥1,400',no:'Famous matcha parfait. Gion branch less crowded.',s:'Wishlist',r:null},
+};
+const SIDX=[
+  {tp:'Place',n:'Ichiran Ramen Shibuya',s:'Ramen · Tokyo',fn:()=>opd('ichiran')},
+  {tp:'Place',n:'Fushimi Inari Taisha',s:'Shrine · Kyoto',fn:()=>opd('inari')},
+  {tp:'Place',n:'% Arabica Arashiyama',s:'Café · Kyoto',fn:()=>opd('arabica')},
+  {tp:'Place',n:'Sushi Saito',s:'Omakase · Tokyo',fn:()=>opd('saito')},
+  {tp:'Place',n:'Arashiyama Bamboo Grove',s:'Nature · Kyoto',fn:()=>opd('bamboo')},
+  {tp:'Place',n:'Nishiki Market',s:'Market · Kyoto',fn:()=>opd('nishiki')},
+  {tp:'Memory',n:'Fushimi Inari at dawn',s:'Day 3 · Kyoto · ★★★★★',fn:()=>om2('inari')},
+  {tp:'Memory',n:'Best ramen of my life',s:'Day 1 · Tokyo · ★★★★★',fn:()=>om2('ramen')},
+  {tp:'Memory',n:'Nara deer chaos',s:'Day 5 · Nara · ★★★★★',fn:()=>om2('deer')},
+  {tp:'Memory',n:'First onsen experience',s:'Day 6 · Hakone · ★★★★★',fn:()=>om2('onsen')},
+  {tp:'Memory',n:'Kinkaku-ji golden light',s:'Day 4 · Kyoto · ★★★★★',fn:()=>om2('golden')},
+  {tp:'Hotel',n:'Park Hyatt Tokyo',s:'Oct 12–14 · Shinjuku',fn:()=>sv('stays',gnb('stays'))},
+  {tp:'Hotel',n:'The Hiiragiya Ryokan',s:'Oct 17–21 · Kyoto',fn:()=>sv('stays',gnb('stays'))},
+  {tp:'Expense',n:'Sushi Saito omakase',s:'¥30,000 · Food · Oct 13',fn:()=>sv('finance',gnb('finance'))},
+  {tp:'Transport',n:'GA 880 SUB→NRT',s:'Oct 12 · Flight',fn:()=>sv('transport',gnb('transport'))},
+  {tp:'Note',n:'Book Sushi Saito 3 months ahead',s:'Future-Me · Japan',fn:()=>sv('dashboard',gnb('dashboard'))},
+  {tp:'Note',n:'Get Suica card on arrival',s:'Future-Me · Japan',fn:()=>sv('dashboard',gnb('dashboard'))},
+  {tp:'Journal',n:'Fushimi Inari before the crowds',s:'Day 3 · Kyoto',fn:()=>sv('journal',gnb('journal'))},
+  {tp:'Journal',n:'The deer do not respect personal space',s:'Day 5 · Nara',fn:()=>sv('journal',gnb('journal'))},
+];
+
+// ── NAVIGATION ──
+function gnb(id){return[...document.querySelectorAll('.nb')].find(b=>b.getAttribute('onclick')&&b.getAttribute('onclick').includes("'"+id+"'"))||null}
+function sv(id,nb){
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('on'));
+  document.getElementById('view-'+id).classList.add('on');
+  if(nb){document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));nb.classList.add('on');}
+  const T={dashboard:'Trip Overview',itinerary:'Itinerary',places:'Places',stays:'Stays',transport:'Transport',routes:'Routes',finance:'Finance',docs:'Documents',memories:'Memories',journal:'Journal',passport:'Passport',wrapped:'Travel Wrapped',search:'Search'};
+  const ADD={dashboard:'+ Add',itinerary:'+ Add Day',places:'+ Add Place',stays:'+ Add Hotel',transport:'+ Add',routes:'+ New Route',finance:'+ Add Expense',docs:'+ Upload',memories:'+ Add Memory',journal:'+ Write Entry',passport:'—',wrapped:'—',search:''};
+  const PRI={dashboard:'View Itinerary',itinerary:'Export PDF',places:'Filter',stays:'Add Hotel',transport:'Add Transport',routes:'New Route',finance:'Export CSV',docs:'Upload File',memories:'Add Memory',journal:'Write Entry',passport:'All Achievements',wrapped:'Share Card',search:''};
+  document.getElementById('ptitle').textContent=T[id]||id;
+  document.getElementById('add-btn').textContent=ADD[id]||'+ Add';
+  document.getElementById('pri-btn').textContent=PRI[id]||'Go';
+  if(id==='search')setTimeout(()=>document.getElementById('sinp').focus(),60);
+}
+function selTrip(t,el){
+  document.querySelectorAll('.tb').forEach(b=>b.classList.remove('on'));el.classList.add('on');
+  const N={japan:'Japan Autumn 2026',bali:'Bali Escape',korea:'Korea Spring 2027'};
+  const M={japan:'🗾 Tokyo · Kyoto · Osaka · Nara &nbsp;·&nbsp; Oct 12 – Nov 2, 2026',bali:'🌴 Ubud · Seminyak · Canggu &nbsp;·&nbsp; Jun 5–15, 2025',korea:'🇰🇷 Seoul · Busan · Jeju &nbsp;·&nbsp; Apr 2–18, 2027'};
+  document.getElementById('bc').textContent=N[t]||t;
+  document.getElementById('htitle').textContent=N[t]||t;
+  document.getElementById('hmeta').innerHTML=M[t]||'';
+  sv('dashboard',document.querySelector('.nb'));
+  toast('📍 Switched to '+N[t]);
+}
+function stab(el){el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+function fp(f,el){
+  if(el){el.closest('.tabs').querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));el.classList.add('on');}
+  document.querySelectorAll('#places-list .fc').forEach(c=>{
+    const s=c.dataset.s||'';
+    c.style.display=(f==='all'||s===f||s.includes(f))?'':'none';
+  });
+}
+function hAdd(){
+  const v=document.querySelector('.view.on').id.replace('view-','');
+  const mp={places:'add-place',finance:'add-exp',memories:'add-mem',journal:'add-jour',stays:'add-stay',transport:'add-tp',docs:'add-doc'};
+  if(mp[v])om(mp[v]);else if(v==='dashboard')om('add-place');else toast('✨ Feature coming soon!');
+}
+function hPri(){
+  const v=document.querySelector('.view.on').id.replace('view-','');
+  if(v==='dashboard')sv('itinerary',gnb('itinerary'));
+  else if(v==='finance')toast('📊 Exporting CSV…');
+  else if(v==='wrapped')toast('🎁 Generating share card…');
+  else if(v==='docs')om('add-doc');
+  else if(v==='memories')om('add-mem');
+  else if(v==='journal')om('add-jour');
+  else toast('✨ Coming soon!');
+}
+
+// ── MODALS ──
+const MTPL={
+'add-place':`<div class="mt2">Add a Place</div>
+<div class="fg"><label class="fl2">Place name</label><input class="fi3" placeholder="e.g. Ichiran Ramen Shibuya" id="pm-n"></div>
+<div class="fr2"><div class="fg"><label class="fl2">Category</label><select class="fse"><option>Ramen</option><option>Café</option><option>Shrine</option><option>Restaurant</option><option>Attraction</option><option>Shopping</option><option>Other</option></select></div><div class="fg"><label class="fl2">City</label><input class="fi3" placeholder="Tokyo"></div></div>
+<div class="fg"><label class="fl2">Status</label><select class="fse"><option>Wishlist</option><option>Planned</option><option>Visited</option></select></div>
+<div class="fg"><label class="fl2">Notes</label><textarea class="fta" placeholder="What to remember…"></textarea></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subPlace()">Save Place</button></div>`,
+
+'add-mem':`<div class="mt2">Add a Memory</div>
+<div class="fg"><label class="fl2">Title</label><input class="fi3" placeholder="e.g. Fushimi Inari at dawn" id="mm-t"></div>
+<div class="fg"><label class="fl2">Rating</label><div class="srat"><input type="radio" id="s5" name="sr" value="5"><label for="s5">★</label><input type="radio" id="s4" name="sr" value="4"><label for="s4">★</label><input type="radio" id="s3" name="sr" value="3"><label for="s3">★</label><input type="radio" id="s2" name="sr" value="2"><label for="s2">★</label><input type="radio" id="s1" name="sr" value="1"><label for="s1">★</label></div></div>
+<div class="fg"><label class="fl2">What made this memorable?</label><textarea class="fta" placeholder="Describe the moment…"></textarea></div>
+<div class="fg"><label class="fl2">💌 Note to future me</label><textarea class="fta" placeholder="What should future you remember?" style="min-height:60px"></textarea></div>
+<div class="fg"><label class="fl2">Would you return?</label><select class="fse"><option>Yes, definitely</option><option>Maybe</option><option>No</option></select></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subMem()">Save Memory</button></div>`,
+
+'add-exp':`<div class="mt2">Add Expense</div>
+<div class="fg"><label class="fl2">Description</label><input class="fi3" placeholder="e.g. Dinner at Pontocho" id="em-n"></div>
+<div class="fr2"><div class="fg"><label class="fl2">Amount (¥)</label><input class="fi3" type="number" placeholder="5000" id="em-a"></div><div class="fg"><label class="fl2">Category</label><select class="fse" id="em-c"><option value="#6B63E8">Accommodation</option><option value="#F4A535">Food</option><option value="#52C478">Transport</option><option value="#E8635A">Activities</option><option value="#c47cd4">Shopping</option></select></div></div>
+<div class="fr2"><div class="fg"><label class="fl2">Date</label><input class="fi3" type="date" value="2026-10-14"></div><div class="fg"><label class="fl2">Payment</label><select class="fse"><option>Cash</option><option>Card</option><option>Suica</option></select></div></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subExp()">Add Expense</button></div>`,
+
+'add-jour':`<div class="mt2">Write Journal Entry</div>
+<div class="fr2"><div class="fg"><label class="fl2">Day</label><input class="fi3" placeholder="Day 3" id="jm-d"></div><div class="fg"><label class="fl2">City</label><input class="fi3" placeholder="Kyoto"></div></div>
+<div class="fg"><label class="fl2">Entry title</label><input class="fi3" placeholder="e.g. The light at Fushimi Inari" id="jm-t"></div>
+<div class="fg"><label class="fl2">Your story</label><textarea class="fta" style="min-height:130px" placeholder="Write freely…" id="jm-b"></textarea></div>
+<div class="fg"><label class="fl2">Rating</label><div class="srat"><input type="radio" id="js5" name="jr" value="5"><label for="js5">★</label><input type="radio" id="js4" name="jr" value="4"><label for="js4">★</label><input type="radio" id="js3" name="jr" value="3"><label for="js3">★</label><input type="radio" id="js2" name="jr" value="2"><label for="js2">★</label><input type="radio" id="js1" name="jr" value="1"><label for="js1">★</label></div></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subJour()">Save Entry</button></div>`,
+
+'add-fm':`<div class="mt2">Note to Future Me</div>
+<div style="background:var(--ams);border-radius:var(--rs);padding:9px 11px;margin-bottom:14px;font-size:12px;color:var(--am)">💌 This will appear next time you plan a trip to this destination.</div>
+<div class="fg"><label class="fl2">Your note</label><textarea class="fta" style="min-height:95px" placeholder="e.g. Book the ryokan 3 months ahead…" id="fmm-t"></textarea></div>
+<div class="fg"><label class="fl2">Category</label><select class="fse"><option>General advice</option><option>Restaurant tip</option><option>Timing / season</option><option>Skip this</option><option>Must do again</option></select></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subFM()">Save Note</button></div>`,
+
+'add-stay':`<div class="mt2">Add Hotel / Stay</div>
+<div class="fg"><label class="fl2">Hotel name</label><input class="fi3" placeholder="e.g. Park Hyatt Tokyo" id="hm-n"></div>
+<div class="fg"><label class="fl2">Address / City</label><input class="fi3" placeholder="Shinjuku, Tokyo"></div>
+<div class="fr2"><div class="fg"><label class="fl2">Check-in</label><input class="fi3" type="date"></div><div class="fg"><label class="fl2">Check-out</label><input class="fi3" type="date"></div></div>
+<div class="fr2"><div class="fg"><label class="fl2">Confirmation #</label><input class="fi3" placeholder="ABC12345"></div><div class="fg"><label class="fl2">Total cost</label><input class="fi3" type="number" placeholder="82000"></div></div>
+<div class="fg"><label class="fl2">Notes</label><textarea class="fta" placeholder="Anything to remember…" style="min-height:56px"></textarea></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="cm();toast('🏨 Hotel added!')">Save Hotel</button></div>`,
+
+'add-tp':`<div class="mt2">Add Transport</div>
+<div class="fg"><label class="fl2">Type</label><select class="fse"><option>Flight</option><option>Shinkansen</option><option>Train</option><option>Bus</option><option>Ferry</option><option>Car Rental</option></select></div>
+<div class="fr2"><div class="fg"><label class="fl2">From</label><input class="fi3" placeholder="Surabaya (SUB)"></div><div class="fg"><label class="fl2">To</label><input class="fi3" placeholder="Tokyo (NRT)"></div></div>
+<div class="fr2"><div class="fg"><label class="fl2">Departure</label><input class="fi3" type="datetime-local"></div><div class="fg"><label class="fl2">Arrival</label><input class="fi3" type="datetime-local"></div></div>
+<div class="fr2"><div class="fg"><label class="fl2">Booking ref</label><input class="fi3" placeholder="GA8841JT"></div><div class="fg"><label class="fl2">Cost (¥)</label><input class="fi3" type="number" placeholder="62000"></div></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="cm();toast('🚄 Transport added!')">Save</button></div>`,
+
+'add-doc':`<div class="mt2">Upload Document</div>
+<div style="border:2px dashed var(--bd2);border-radius:var(--r);padding:28px;text-align:center;margin-bottom:14px;cursor:pointer" onclick="toast('📂 Upload dialog would open here')">
+<div style="font-size:26px;margin-bottom:7px">📎</div>
+<div style="font-size:13px;color:var(--tx2);margin-bottom:3px">Drop files or click to upload</div>
+<div style="font-size:11px;color:var(--tx3)">PDF, PNG, JPG, WEBP</div></div>
+<div class="fg"><label class="fl2">Category</label><select class="fse"><option>Flight</option><option>Hotel</option><option>Restaurant</option><option>Transport</option><option>Insurance</option><option>Visa</option><option>Other</option></select></div>
+<div class="fg"><label class="fl2">Name</label><input class="fi3" placeholder="e.g. GA880 Boarding Pass"></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="cm();toast('📄 Document uploaded!')">Upload</button></div>`,
+
+'new-trip':`<div class="mt2">Start a New Trip</div>
+<div class="fg"><label class="fl2">Trip name</label><input class="fi3" placeholder="e.g. Korea Spring 2027" id="nt-n"></div>
+<div class="fg"><label class="fl2">Destinations</label><input class="fi3" placeholder="e.g. Seoul, Busan, Jeju"></div>
+<div class="fr2"><div class="fg"><label class="fl2">Start date</label><input class="fi3" type="date"></div><div class="fg"><label class="fl2">End date</label><input class="fi3" type="date"></div></div>
+<div class="fg"><label class="fl2">Status</label><select class="fse"><option>Planning</option><option>Upcoming</option><option>Active</option></select></div>
+<div class="fg"><label class="fl2">Description</label><textarea class="fta" placeholder="What's this trip about?" style="min-height:56px"></textarea></div>
+<div class="fb2"><button class="btn" onclick="cm()">Cancel</button><button class="btn btn-p" onclick="subTrip()">Create Trip</button></div>`,
+
+'stay1':`<div class="mt2">Park Hyatt Tokyo</div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px">
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">CHECK-IN</div><div style="font-size:13px;color:var(--tx)">Oct 12, 2026</div></div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">CHECK-OUT</div><div style="font-size:13px;color:var(--tx)">Oct 14, 2026</div></div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">CONF#</div><div style="font-size:13px;color:var(--tx);font-family:monospace">PHT-849201</div></div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">TOTAL</div><div style="font-size:13px;color:var(--tx)">¥82,000</div></div>
+</div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:10px;font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:13px">52nd floor Shinjuku views. Bar on 52F is worth the splurge at least one evening.</div>
+<div style="display:flex;gap:7px"><button class="btn" onclick="cm()">Close</button><button class="btn btn-p" onclick="cm();toast('📋 Confirmation number copied!')">Copy Conf#</button></div>`,
+};
+
+function om(k){const t=MTPL[k];if(!t)return;document.getElementById('mi').innerHTML=t;document.getElementById('ov').classList.add('open');}
+function cm(){document.getElementById('ov').classList.remove('open');}
+function moc(e){if(e.target.id==='ov')cm();}
+
+function opd(id){
+  const p=PLC[id];if(!p)return;
+  const sc={Visited:'p-on',Planned:'p-up',Wishlist:'p-wi',Reserved:'p-on'}[p.s]||'p-pl';
+  const st=p.r?'★'.repeat(p.r)+'☆'.repeat(5-p.r):'—';
+  document.getElementById('mi').innerHTML=`<div style="text-align:center;margin-bottom:14px"><div style="font-size:42px;margin-bottom:7px">${p.e}</div><div style="font-family:var(--fd);font-size:18px;margin-bottom:2px">${p.n}</div><div style="font-size:11.5px;color:var(--tx3)">${p.c} · ${p.a}</div></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:13px">
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">STATUS</div><span class="pill ${sc}">${p.s}</span></div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">PRICE</div><div style="font-size:12.5px;color:var(--tx)">${p.pr}</div></div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">HOURS</div><div style="font-size:12px;color:var(--tx2)">${p.h}</div></div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:9px"><div style="font-size:9.5px;color:var(--tx3);margin-bottom:2px">RATING</div><div style="color:var(--am);font-size:12px">${st}</div></div>
+</div>
+<div style="background:var(--sf2);border-radius:var(--rs);padding:11px;margin-bottom:12px;font-size:12.5px;color:var(--tx2);line-height:1.7">${p.no}</div>
+<div style="display:flex;gap:7px">
+<button class="btn btn-p" style="flex:1" onclick="cm();toast('✅ Marked as visited!')">Mark Visited</button>
+<button class="btn" onclick="cm();om('add-mem')">+ Memory</button>
+</div>`;
+  document.getElementById('ov').classList.add('open');
+}
+function om2(id){
+  const m=MEM[id];if(!m)return;
+  const st='★'.repeat(m.r)+'☆'.repeat(5-m.r);
+  document.getElementById('mi').innerHTML=`<div style="text-align:center;margin-bottom:13px"><div style="font-size:50px;margin-bottom:9px">${m.e}</div><div style="font-family:var(--fd);font-size:18px;font-style:italic;margin-bottom:3px">${m.t}</div><div style="font-size:11.5px;color:var(--tx3)">${m.p}</div><div style="font-size:11px;color:var(--tx3);margin-top:1px">${m.d}</div><div style="color:var(--am);font-size:14px;margin-top:5px">${st}</div></div>
+<p style="font-size:12.5px;color:var(--tx2);line-height:1.75;margin-bottom:13px">${m.n}</p>
+<div class="fm" style="margin-bottom:11px"><div class="fmh"><span>💌</span><span class="fmf">Note to future me</span></div><div class="fmt">"${m.fm}"</div></div>
+${m.ret?'<div style="font-size:12px;color:var(--gn);margin-bottom:12px">✓ Would return</div>':''}
+<div style="display:flex;gap:7px"><button class="btn" onclick="cm()">Close</button><button class="btn btn-p" onclick="cm();toast('✏️ Edit coming soon!')">Edit</button></div>`;
+  document.getElementById('ov').classList.add('open');
+}
+
+// ── FORM SUBMITS ──
+function subPlace(){const n=document.getElementById('pm-n')?.value;if(!n){toast('⚠️ Enter a place name');return;}cm();toast('📍 '+n+' saved!');}
+function subMem(){const t=document.getElementById('mm-t')?.value;cm();toast('📸 Memory saved'+(t?' — '+t:'')+'!');}
+function subExp(){
+  const n=document.getElementById('em-n')?.value;const a=document.getElementById('em-a')?.value;
+  if(!n||!a){toast('⚠️ Fill in name and amount');return;}
+  const col=document.getElementById('em-c')?.value||'#F4A535';
+  const el=document.createElement('div');el.className='ei';
+  el.innerHTML=`<div class="ed" style="background:${col}"></div><div style="flex:1"><div class="en">${n}</div><div class="et">Just now</div></div><div class="ea">¥${parseInt(a).toLocaleString()}</div>`;
+  document.getElementById('exp-list').prepend(el);cm();toast('💰 ¥'+parseInt(a).toLocaleString()+' added!');
+}
+function subJour(){
+  const day=document.getElementById('jm-d')?.value||'?';const t=document.getElementById('jm-t')?.value;const b=document.getElementById('jm-b')?.value;
+  if(!t||!b){toast('⚠️ Add title and entry text');return;}
+  const el=document.createElement('div');el.className='je';el.style.paddingTop='0';
+  el.innerHTML=`<div class="jeh"><div class="jed">${day}</div><div class="jet">${t}</div></div><div class="jeb">${b}</div><div class="jer">★★★★★</div>`;
+  document.getElementById('journal-card').prepend(el);cm();toast('📖 Entry saved!');
+}
+function subFM(){const t=document.getElementById('fmm-t')?.value;if(!t){toast('⚠️ Write your note');return;}const el=document.createElement('div');el.className='fm';el.innerHTML=`<div class="fmh"><span>💌</span><span class="fmf">Yourself · Just now</span></div><div class="fmt">"${t}"</div>`;document.getElementById('fm-list').prepend(el);cm();toast('💌 Note to future you saved!');}
+function subTrip(){const n=document.getElementById('nt-n')?.value;if(!n){toast('⚠️ Give the trip a name');return;}cm();toast('✈️ '+n+' created!');}
+
+// ── STAMPS ──
+function ps(el){el.classList.add('press');setTimeout(()=>el.classList.remove('press'),400);}
+function psc(el){if(el.classList.contains('lk'))return;el.style.transform='scale(0.94)';setTimeout(()=>el.style.transform='',200);toast('🎖 Stamp collected!');}
+
+// ── SEARCH ──
+const TC={'Place':'var(--gn)','Memory':'var(--am)','Hotel':'var(--rd)','Expense':'#c47cd4','Transport':'var(--ac)','Note':'var(--am)','Journal':'var(--tx2)'};
+function doSearch(q){
+  const w=document.getElementById('sres-wrap');
+  if(!q.trim()){w.innerHTML='';return;}
+  const r=SIDX.filter(i=>i.n.toLowerCase().includes(q.toLowerCase())||i.s.toLowerCase().includes(q.toLowerCase())||i.tp.toLowerCase().includes(q.toLowerCase()));
+  if(!r.length){w.innerHTML='<div style="padding:20px;text-align:center;font-size:13px;color:var(--tx3)">No results for "'+q+'"</div>';return;}
+  w.innerHTML='<div class="sres">'+r.map((i,ix)=>`<div class="sri" onclick="document.getElementById('sres-wrap').innerHTML='';(${i.fn.toString()})()"><span class="srt" style="color:${TC[i.tp]||'var(--tx3)'}">${i.tp}</span><div><div class="srn">${i.n}</div><div class="srs">${i.s}</div></div></div>`).join('')+'</div>';
+}
+
+// ── TOAST ──
+let TT;
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.style.display='block';clearTimeout(TT);TT=setTimeout(()=>t.style.display='none',2800);}
+
+
+// ── SETTINGS ──
+function setTheme(mode, btn) {
+  const r = document.documentElement.style;
+  if (mode === 'light') {
+    r.setProperty('--bg','#F5F4F0');r.setProperty('--sf','#FFFFFF');r.setProperty('--sf2','#F0EEE8');r.setProperty('--sf3','#E5E2D8');
+    r.setProperty('--bd','rgba(0,0,0,0.08)');r.setProperty('--bd2','rgba(0,0,0,0.14)');
+    r.setProperty('--tx','#1A1928');r.setProperty('--tx2','rgba(26,25,40,0.65)');r.setProperty('--tx3','rgba(26,25,40,0.38)');
+    document.getElementById('btn-light').style.cssText='font-size:11px;background:var(--ac);border-color:var(--ac);color:#fff';
+    document.getElementById('btn-dark').style.cssText='font-size:11px';
+    toast('☀️ Light mode on');
+  } else {
+    r.setProperty('--bg','#0F0E17');r.setProperty('--sf','#1A1928');r.setProperty('--sf2','#222136');r.setProperty('--sf3','#2A2940');
+    r.setProperty('--bd','rgba(255,255,255,0.07)');r.setProperty('--bd2','rgba(255,255,255,0.12)');
+    r.setProperty('--tx','#FFFCF5');r.setProperty('--tx2','rgba(255,252,245,0.6)');r.setProperty('--tx3','rgba(255,252,245,0.35)');
+    document.getElementById('btn-dark').style.cssText='font-size:11px;background:var(--ac);border-color:var(--ac);color:#fff';
+    document.getElementById('btn-light').style.cssText='font-size:11px';
+    toast('🌙 Dark mode on');
+  }
+}
+function setAccent(color, el) {
+  document.documentElement.style.setProperty('--ac', color);
+  const soft = color+'26';
+  document.documentElement.style.setProperty('--acs', color+'26');
+  document.querySelectorAll('.accent-swatch').forEach(s=>s.style.borderColor='transparent');
+  el.style.borderColor='white';
+  toast('🎨 Accent color updated!');
+}
+function toggleSetting(el, key) {
+  const isOn = el.classList.toggle('on');
+  const thumb = el.querySelector('div');
+  if (isOn) {
+    el.style.background='var(--ac)';
+    thumb.style.left='18px';thumb.style.opacity='1';
+  } else {
+    el.style.background='var(--sf3)';
+    thumb.style.left='2px';thumb.style.opacity='.6';
+  }
+  toast(isOn ? '✅ Setting enabled' : '⭕ Setting disabled');
+}
+
+// ── KEYBOARD SHORTCUTS ──
+let gPressed = false, gTimer;
+document.addEventListener('keydown', e => {
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') return;
+  const k = e.key.toLowerCase();
+  // Escape closes modal
+  if (k === 'escape') { cm(); return; }
+  // Cmd/Ctrl+K opens search
+  if ((e.metaKey || e.ctrlKey) && k === 'k') { e.preventDefault(); sv('search', gnb('search')); return; }
+  // N = new / add
+  if (k === 'n' && !gPressed) { hAdd(); return; }
+  // G+? combos
+  if (k === 'g' && !gPressed) { gPressed = true; clearTimeout(gTimer); gTimer = setTimeout(()=>gPressed=false, 1200); return; }
+  if (gPressed) {
+    const map = { d:'dashboard', i:'itinerary', p:'places', m:'memories', f:'finance', j:'journal', s:'settings', t:'transport', w:'wrapped' };
+    if (map[k]) { sv(map[k], gnb(map[k])); toast('→ '+map[k].charAt(0).toUpperCase()+map[k].slice(1)); }
+    gPressed = false; clearTimeout(gTimer);
+  }
+});
+
+// ── COUNTDOWN ──
+(()=>{const d=new Date('2026-10-12');const df=Math.ceil((d-new Date())/864e5);const el=document.getElementById('cdn');if(el)el.textContent=df>0?df:'Active';})();
+</script>
+</body>
+</html>
