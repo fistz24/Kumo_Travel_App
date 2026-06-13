@@ -217,46 +217,51 @@ const createDemoData = () => {
   };
 };
 
-// ---------- Storage hook ----------
+// ---------- Storage hook (localStorage-backed) ----------
+
+const STORAGE_KEY = 'kumo-data';
 
 function useKumoData() {
   const [data, setData] = useState(null);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    (async () => {
-      try {
-        const res = await window.storage.get('kumo-data');
-        if (res && res.value) {
-          const parsed = JSON.parse(res.value);
-          // Backfill settings for forward-compat
-          parsed.settings = {
-            theme: 'sky', defaultCurrency: 'USD', name: 'Traveler',
-            docCategories: [...DOC_CATEGORIES_DEFAULT],
-            expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
-            placeCategories: [...PLACE_CATEGORIES],
-            ...(parsed.settings || {}),
-          };
-          parsed.routes = parsed.routes || [];
-          parsed.documents = parsed.documents || [];
-          parsed.memories = parsed.memories || [];
-          parsed.futureNotes = parsed.futureNotes || [];
-          parsed.stamps = parsed.stamps || [];
-          setData(parsed);
-        } else {
-          setData(createDemoData());
-        }
-      } catch {
+    try {
+      const raw = window.localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        // Backfill settings for forward-compat
+        parsed.settings = {
+          theme: 'sky', defaultCurrency: 'USD', name: 'Traveler',
+          docCategories: [...DOC_CATEGORIES_DEFAULT],
+          expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
+          placeCategories: [...PLACE_CATEGORIES],
+          ...(parsed.settings || {}),
+        };
+        parsed.routes = parsed.routes || [];
+        parsed.documents = parsed.documents || [];
+        parsed.memories = parsed.memories || [];
+        parsed.futureNotes = parsed.futureNotes || [];
+        parsed.stamps = parsed.stamps || [];
+        setData(parsed);
+      } else {
         setData(createDemoData());
       }
-      setLoaded(true);
-    })();
+    } catch {
+      setData(createDemoData());
+    }
+    setLoaded(true);
   }, []);
 
   useEffect(() => {
     if (!loaded || !data) return;
     const t = setTimeout(() => {
-      window.storage.set('kumo-data', JSON.stringify(data)).catch(() => {});
+      try {
+        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+      } catch (err) {
+        // localStorage may be full (e.g. too many large photos) — fail silently
+        console.warn('Kumo: failed to save to localStorage', err);
+      }
     }, 350);
     return () => clearTimeout(t);
   }, [data, loaded]);
@@ -2886,12 +2891,7 @@ export default function KumoApp() {
       minHeight: '100vh', display: 'flex',
     }}>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;500;600;700;800;900&display=swap');
-        * { box-sizing: border-box; }
-        body { margin: 0; }
         select, input, textarea, button { font-family: 'Nunito', sans-serif; }
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
-        ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 8px; }
       `}</style>
 
       {!isMobile && (
