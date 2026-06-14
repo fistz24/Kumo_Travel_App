@@ -2,498 +2,31 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   Home, Calendar, MapPin, Train, Wallet as WalletIcon,
   FolderOpen, Camera, BookOpen, Settings as SettingsIcon,
-  Plus, X, ChevronRight, Star, Search, Menu, ArrowLeft,
+  Plus, X, ChevronRight, Search, Menu,
   Trash2, Edit2, Check, Clock, FileText, Download,
   ExternalLink, Sparkles, Tag, MoreHorizontal,
-  Plane, Bed, Footprints, Compass, GripVertical, PiggyBank, Stamp, Copy
+  Plane, Bed, Footprints, Compass, GripVertical, PiggyBank, Stamp, Copy, Upload
 } from 'lucide-react';
+
+import {
+  PASTEL_THEMES, CURRENCIES, PLACE_CATEGORIES, PLACE_STATUSES, TRANSPORT_TYPES,
+  DOC_CATEGORIES_DEFAULT, EXPENSE_CATEGORIES_DEFAULT, TRIP_STATUSES, MEMORY_TYPES,
+  PAYMENT_METHODS, ACHIEVEMENTS,
+} from './lib/constants';
+import {
+  uid, fmtDate, fmtDateShort, fmtWeekday, daysBetween,
+  currencyFmt, todayISO,
+} from './lib/utils';
+import { useKumoData } from './lib/useKumoData';
+import {
+  IconBtn, Card, Btn, inputStyle, Input, TextArea, Select, Pill,
+  StarRating, EmptyState, FloatingShapes, Modal, PageHeader, ConfirmDialog,
+} from './components/ui';
+import ImportWizard from './components/ImportWizard';
 
 /* ============================================================
    KUMO — Personal Travel Operating System
    ============================================================ */
-
-// ---------- Constants ----------
-
-const PASTEL_THEMES = [
-  { id: 'sky',    name: 'Sky Mist',     primary: '#7FA8D9', accent: '#F4A896', surface: '#FAF7F2', soft: '#E8EEF7' },
-  { id: 'sage',   name: 'Sage Garden',  primary: '#8FAE8C', accent: '#F2C2A0', surface: '#F8F9F4', soft: '#E9F0E6' },
-  { id: 'lav',    name: 'Lavender Fog', primary: '#A89AD4', accent: '#F6C6CC', surface: '#FAF8FC', soft: '#EFEAF7' },
-  { id: 'peach',  name: 'Peach Sunset', primary: '#EFA98E', accent: '#9CC9C5', surface: '#FFF8F4', soft: '#FBEAE2' },
-  { id: 'mint',   name: 'Mint Cloud',   primary: '#7CBAB0', accent: '#F4C6A8', surface: '#F5FAF9', soft: '#E3F2EE' },
-  { id: 'sand',   name: 'Warm Sand',    primary: '#D2AC7A', accent: '#A8C4D9', surface: '#FCF8F2', soft: '#F2E7D6' },
-  { id: 'rose',   name: 'Dusty Rose',   primary: '#D08FA0', accent: '#A8C9B5', surface: '#FCF6F7', soft: '#F5E6EA' },
-  { id: 'slate',  name: 'Cloud Slate',  primary: '#90A4BD', accent: '#E8C2A0', surface: '#F7F8FA', soft: '#E8EDF2' },
-];
-
-const CURRENCIES = [
-  'USD','EUR','GBP','JPY','CNY','AUD','CAD','CHF','HKD','SGD','SEK','KRW',
-  'NOK','NZD','INR','MXN','TWD','ZAR','BRL','DKK','PLN','THB','IDR','HUF',
-  'CZK','ILS','CLP','PHP','AED','COP','SAR','MYR','RON','VND','BGN','HRK',
-  'ISK','TRY','PKR','EGP','QAR','KWD','BHD','OMR','JOD','MAD','NGN','KES',
-  'GHS','ARS','UAH','RUB','PEN','UYU','BOB','PYG','DZD','TND','LKR',
-  'BDT','NPR','MMK','KHR','LAK','MNT','KZT','UZS','AZN','GEL','AMD','BYN',
-  'MDL','ALL','MKD','RSD','BAM','XOF','XAF','ETB','TZS','UGX','ZMW','MWK',
-  'RWF','BIF','SDG','LYD','IQD','IRR','AFN','YER','SYP','LBP','BND','FJD',
-  'PGK','WST','TOP','XPF','BBD','BSD','BZD','BMD','KYD','JMD','TTD','XCD',
-  'HTG','DOP','GTQ','HNL','NIO','CRC','PAB','SVC',
-];
-
-const PLACE_CATEGORIES = ['Restaurant','Café','Attraction','Shopping','Hidden Gem','Hotel','Other'];
-const PLACE_STATUSES = ['Wishlist','Planned','Visited','Skipped','Favorite'];
-const TRANSPORT_TYPES = ['Flight','Train','Bus','Metro','Car Rental','Ferry','Taxi'];
-const DOC_CATEGORIES_DEFAULT = ['Flights','Hotels','Restaurants','Transportation','Insurance','Visa','Other'];
-const EXPENSE_CATEGORIES_DEFAULT = ['Accommodation','Food','Transportation','Activities','Shopping','Miscellaneous'];
-const TRIP_STATUSES = ['Planning','Upcoming','Active','Completed','Archived'];
-const MEMORY_TYPES = ['Restaurant','Hotel','Place','Daily','Custom'];
-const PAYMENT_METHODS = ['Cash','Credit Card','Debit Card','Mobile Pay','Bank Transfer','Other'];
-
-const ACHIEVEMENTS = [
-  { id: 'ramen',   icon: '🍜', name: 'Ramen Lover',     desc: 'Tag 3 places as "Ramen"' },
-  { id: 'cafe',    icon: '☕', name: 'Café Hunter',     desc: 'Visit 5 cafés' },
-  { id: 'temple',  icon: '🏯', name: 'Temple Explorer', desc: 'Visit 5 attractions' },
-  { id: 'sakura',  icon: '🌸', name: 'Sakura Chaser',   desc: 'Tag a place "sakura"' },
-  { id: 'city',    icon: '🗺️', name: 'City Collector',  desc: 'Visit 5 different cities' },
-  { id: 'flyer',   icon: '✈️', name: 'Frequent Flyer',  desc: 'Log 5 flights' },
-  { id: 'keeper',  icon: '📸', name: 'Memory Keeper',   desc: 'Create 10 memories' },
-];
-
-// ---------- Utilities ----------
-
-const uid = () => Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
-
-const fmtDate = (d) => {
-  if (!d) return '';
-  const date = new Date(d + 'T00:00:00');
-  if (isNaN(date)) return d;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
-const fmtDateShort = (d) => {
-  if (!d) return '';
-  const date = new Date(d + 'T00:00:00');
-  if (isNaN(date)) return d;
-  return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-};
-
-const fmtWeekday = (d) => {
-  if (!d) return '';
-  const date = new Date(d + 'T00:00:00');
-  if (isNaN(date)) return '';
-  return date.toLocaleDateString(undefined, { weekday: 'short' });
-};
-
-const daysBetween = (a, b) => {
-  const d1 = new Date(a + 'T00:00:00');
-  const d2 = new Date(b + 'T00:00:00');
-  if (isNaN(d1) || isNaN(d2)) return 0;
-  return Math.round((d2 - d1) / 86400000);
-};
-
-const dateRange = (start, end) => {
-  const out = [];
-  if (!start || !end) return out;
-  let cur = new Date(start + 'T00:00:00');
-  const last = new Date(end + 'T00:00:00');
-  if (isNaN(cur) || isNaN(last)) return out;
-  let guard = 0;
-  while (cur <= last && guard < 366) {
-    out.push(cur.toISOString().slice(0, 10));
-    cur.setDate(cur.getDate() + 1);
-    guard++;
-  }
-  return out;
-};
-
-const currencyFmt = (amount, currency) => {
-  const num = Number(amount) || 0;
-  try {
-    return new Intl.NumberFormat(undefined, { style: 'currency', currency: currency || 'USD', maximumFractionDigits: 2 }).format(num);
-  } catch {
-    return `${num.toFixed(2)} ${currency || ''}`;
-  }
-};
-
-const todayISO = () => new Date().toISOString().slice(0, 10);
-
-const round2 = (n) => Math.round((Number(n) || 0) * 100) / 100;
-
-// ---------- Default / Demo Data ----------
-
-const createDemoData = () => {
-  const tripId = uid();
-  const day1 = uid(), day2 = uid(), day3 = uid(), day4 = uid();
-  const hotel1 = uid();
-  const placeRamen = uid(), placeShrine = uid(), placeCafe = uid();
-  return {
-    settings: {
-      theme: 'sky',
-      defaultCurrency: 'USD',
-      name: 'Traveler',
-      docCategories: [...DOC_CATEGORIES_DEFAULT],
-      expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
-      placeCategories: [...PLACE_CATEGORIES],
-    },
-    trips: [
-      {
-        id: tripId,
-        name: 'Japan Autumn 2026',
-        destination: 'Japan',
-        startDate: '2026-11-10',
-        endDate: '2026-11-17',
-        description: 'Tokyo, Kyoto and Osaka — first big trip with friends. Aiming for autumn foliage and great food.',
-        status: 'Planning',
-        coverPhoto: '',
-        budget: 2500,
-        currency: 'USD',
-      },
-    ],
-    itineraryDays: [
-      { id: day1, tripId, date: '2026-11-10', city: 'Tokyo', notes: 'Arrival day — take it easy, adjust to time zone.', completed: false },
-      { id: day2, tripId, date: '2026-11-11', city: 'Tokyo', notes: 'Explore Asakusa and Ueno.', completed: false },
-      { id: day3, tripId, date: '2026-11-12', city: 'Tokyo', notes: 'Shibuya and Harajuku day.', completed: false },
-      { id: day4, tripId, date: '2026-11-13', city: 'Kyoto', notes: 'Shinkansen to Kyoto, evening in Gion.', completed: false },
-    ],
-    activities: [
-      { id: uid(), dayId: day2, time: '07:30', title: 'Senso-ji Temple', notes: 'Go early to avoid crowds', completed: false, placeId: placeShrine },
-      { id: uid(), dayId: day2, time: '12:00', title: 'Lunch in Ueno Park', notes: '', completed: false, placeId: '' },
-      { id: uid(), dayId: day3, time: '10:00', title: 'Shibuya Crossing', notes: '', completed: false, placeId: '' },
-      { id: uid(), dayId: day3, time: '18:30', title: 'Ichiran Ramen dinner', notes: '', completed: false, placeId: placeRamen },
-    ],
-    places: [
-      {
-        id: placeRamen, tripId, name: 'Ichiran Ramen Shibuya', category: 'Restaurant',
-        customCategory: 'Ramen', tags: ['ramen','solo-booth'], notes: 'Famous tonkotsu, individual booths.',
-        website: '', openingHours: '10:00 - 22:00', priceRange: '$$',
-        reservationRequired: false, reservationStatus: '', rating: 0,
-        status: 'Wishlist', address: 'Shibuya, Tokyo', city: 'Tokyo', files: [],
-      },
-      {
-        id: placeShrine, tripId, name: 'Fushimi Inari Shrine', category: 'Attraction',
-        customCategory: '', tags: ['shrine','hiking','iconic','sakura'], notes: 'Thousands of torii gates, go at sunrise.',
-        website: '', openingHours: '24 hours', priceRange: 'Free',
-        reservationRequired: false, reservationStatus: '', rating: 0,
-        status: 'Planned', address: 'Fushimi, Kyoto', city: 'Kyoto', files: [],
-      },
-      {
-        id: placeCafe, tripId, name: '% Arabica Kyoto', category: 'Café',
-        customCategory: 'Matcha Café', tags: ['coffee','riverside'], notes: 'Riverside seating, minimalist design.',
-        website: '', openingHours: '08:00 - 18:00', priceRange: '$$',
-        reservationRequired: false, reservationStatus: '', rating: 0,
-        status: 'Wishlist', address: 'Arashiyama, Kyoto', city: 'Kyoto', files: [],
-      },
-    ],
-    hotels: [
-      {
-        id: hotel1, tripId, name: 'Shinjuku Granbell Hotel', address: '2-14-5 Kabukicho, Shinjuku, Tokyo',
-        checkIn: '2026-11-10', checkOut: '2026-11-13', confirmationNumber: 'GB-883201',
-        website: '', phone: '', rating: 0, notes: 'Close to station, late checkout requested.', files: [],
-        mapLink: '',
-      },
-    ],
-    transport: [
-      {
-        id: uid(), tripId, type: 'Flight', departure: 'Los Angeles (LAX)', arrival: 'Tokyo (HND)',
-        date: '2026-11-10', time: '01:15', bookingStatus: 'Booked', seatInfo: '34C',
-        confirmationNumber: 'NH-XJ29K', cost: 780, currency: 'USD', notes: 'ANA direct flight', files: [],
-      },
-      {
-        id: uid(), tripId, type: 'Train', departure: 'Tokyo Station', arrival: 'Kyoto Station',
-        date: '2026-11-13', time: '09:00', bookingStatus: 'Booked', seatInfo: 'Car 7, 12A',
-        confirmationNumber: 'JR-44213', cost: 130, currency: 'USD', notes: 'Shinkansen Hikari', files: [],
-      },
-    ],
-    routes: [],
-    documents: [],
-    expenses: [
-      { id: uid(), tripId, amount: 780, currency: 'USD', category: 'Transportation', date: '2026-11-10', notes: 'Round trip flight', payment: 'Credit Card', planned: true, attachments: [] },
-      { id: uid(), tripId, amount: 450, currency: 'USD', category: 'Accommodation', date: '2026-11-10', notes: '3 nights Shinjuku hotel', payment: 'Credit Card', planned: true, attachments: [] },
-      { id: uid(), tripId, amount: 35, currency: 'USD', category: 'Food', date: '2026-11-10', notes: 'Convenience store dinner', payment: 'Cash', planned: false, attachments: [] },
-    ],
-    memories: [],
-    futureNotes: [
-      { id: uid(), tripId, destination: 'Tokyo', note: 'Book Ichiran at least a week ahead — long lines at peak hours.', createdAt: '2026-06-01' },
-    ],
-    stamps: [],
-  };
-};
-
-// ---------- Storage hook (localStorage-backed) ----------
-
-const STORAGE_KEY = 'kumo-data';
-
-function useKumoData() {
-  const [data, setData] = useState(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        // Backfill settings for forward-compat
-        parsed.settings = {
-          theme: 'sky', defaultCurrency: 'USD', name: 'Traveler',
-          docCategories: [...DOC_CATEGORIES_DEFAULT],
-          expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
-          placeCategories: [...PLACE_CATEGORIES],
-          ...(parsed.settings || {}),
-        };
-        parsed.routes = parsed.routes || [];
-        parsed.documents = parsed.documents || [];
-        parsed.memories = parsed.memories || [];
-        parsed.futureNotes = parsed.futureNotes || [];
-        parsed.stamps = parsed.stamps || [];
-        setData(parsed);
-      } else {
-        setData(createDemoData());
-      }
-    } catch {
-      setData(createDemoData());
-    }
-    setLoaded(true);
-  }, []);
-
-  useEffect(() => {
-    if (!loaded || !data) return;
-    const t = setTimeout(() => {
-      try {
-        window.localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-      } catch (err) {
-        // localStorage may be full (e.g. too many large photos) — fail silently
-        console.warn('Kumo: failed to save to localStorage', err);
-      }
-    }, 350);
-    return () => clearTimeout(t);
-  }, [data, loaded]);
-
-  return [data, setData, loaded];
-}
-
-// ---------- Shared UI Primitives ----------
-
-const IconBtn = ({ icon: Icon, onClick, label, active, danger, size = 18 }) => (
-  <button
-    onClick={onClick}
-    aria-label={label}
-    title={label}
-    style={{
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      width: 36, height: 36, borderRadius: 12, border: 'none',
-      background: active ? 'var(--kumo-soft)' : 'transparent',
-      color: danger ? '#C75C4A' : 'var(--kumo-text)',
-      cursor: 'pointer', transition: 'background 0.15s', flexShrink: 0,
-    }}
-    onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--kumo-soft)'; }}
-    onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
-  >
-    <Icon size={size} />
-  </button>
-);
-
-const Card = ({ children, style, onClick, className }) => (
-  <div
-    className={className}
-    onClick={onClick}
-    style={{
-      background: '#fff', borderRadius: 18, padding: '1rem 1.25rem',
-      boxShadow: '0 2px 12px rgba(60,50,40,0.06)',
-      border: '1px solid rgba(0,0,0,0.03)',
-      cursor: onClick ? 'pointer' : 'default',
-      transition: 'transform 0.15s, box-shadow 0.15s',
-      ...style,
-    }}
-    onMouseEnter={onClick ? (e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(60,50,40,0.10)'; }) : undefined}
-    onMouseLeave={onClick ? (e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(60,50,40,0.06)'; }) : undefined}
-  >
-    {children}
-  </div>
-);
-
-const Btn = ({ children, onClick, variant = 'primary', size = 'md', icon: Icon, style, type = 'button', disabled }) => {
-  const base = {
-    display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
-    border: 'none', borderRadius: 14, cursor: disabled ? 'default' : 'pointer',
-    fontFamily: 'Nunito, sans-serif', fontWeight: 700,
-    fontSize: size === 'sm' ? 13 : 14.5,
-    padding: size === 'sm' ? '6px 12px' : '10px 18px',
-    transition: 'opacity 0.15s, transform 0.1s',
-    opacity: disabled ? 0.5 : 1,
-    whiteSpace: 'nowrap',
-  };
-  const variants = {
-    primary: { background: 'var(--kumo-primary)', color: '#fff' },
-    secondary: { background: 'var(--kumo-soft)', color: 'var(--kumo-text)' },
-    ghost: { background: 'transparent', color: 'var(--kumo-text)' },
-    danger: { background: '#FBEAE7', color: '#C75C4A' },
-    outline: { background: 'transparent', color: 'var(--kumo-text)', border: '1.5px solid var(--kumo-soft)' },
-  };
-  return (
-    <button
-      type={type}
-      disabled={disabled}
-      onClick={onClick}
-      style={{ ...base, ...variants[variant], ...style }}
-      onMouseDown={e => { if (!disabled) e.currentTarget.style.transform = 'scale(0.97)'; }}
-      onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
-    >
-      {Icon && <Icon size={16} />}
-      {children}
-    </button>
-  );
-};
-
-const Field = ({ label, children }) => (
-  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 700, color: 'var(--kumo-text-soft)', flex: 1, minWidth: 0 }}>
-    {label}
-    {children}
-  </label>
-);
-
-const inputStyle = {
-  fontFamily: 'Nunito, sans-serif', fontSize: 14.5, fontWeight: 500,
-  padding: '9px 12px', borderRadius: 12, border: '1.5px solid var(--kumo-soft)',
-  outline: 'none', color: 'var(--kumo-text)', background: '#fff', width: '100%', boxSizing: 'border-box',
-};
-
-const Input = ({ label, ...props }) => (
-  <Field label={label}>
-    <input {...props} style={{ ...inputStyle, ...(props.style || {}) }} />
-  </Field>
-);
-
-const TextArea = ({ label, ...props }) => (
-  <Field label={label}>
-    <textarea {...props} style={{ ...inputStyle, resize: 'vertical', minHeight: 70, ...(props.style || {}) }} />
-  </Field>
-);
-
-const Select = ({ label, children, ...props }) => (
-  <Field label={label}>
-    <select {...props} style={{ ...inputStyle, fontWeight: 600, ...(props.style || {}) }}>
-      {children}
-    </select>
-  </Field>
-);
-
-const Pill = ({ children, color, onClick, active, icon: Icon }) => (
-  <span
-    onClick={onClick}
-    style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
-      fontSize: 12.5, fontWeight: 700, padding: '4px 11px', borderRadius: 999,
-      background: active ? 'var(--kumo-primary)' : (color || 'var(--kumo-soft)'),
-      color: active ? '#fff' : 'var(--kumo-text-soft)',
-      cursor: onClick ? 'pointer' : 'default',
-      whiteSpace: 'nowrap', userSelect: 'none',
-    }}
-  >
-    {Icon && <Icon size={12} />}
-    {children}
-  </span>
-);
-
-const StarRating = ({ value = 0, onChange, size = 18 }) => (
-  <div style={{ display: 'flex', gap: 2 }}>
-    {[1,2,3,4,5].map(n => (
-      <Star
-        key={n}
-        size={size}
-        onClick={() => onChange && onChange(n === value ? 0 : n)}
-        fill={n <= value ? '#F4A896' : 'none'}
-        color={n <= value ? '#F4A896' : '#D9D2C7'}
-        style={{ cursor: onChange ? 'pointer' : 'default' }}
-      />
-    ))}
-  </div>
-);
-
-const EmptyState = ({ icon: Icon, title, subtitle, action }) => (
-  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--kumo-text-soft)' }}>
-    <div style={{
-      width: 64, height: 64, borderRadius: 20, background: 'var(--kumo-soft)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem',
-    }}>
-      <Icon size={28} color="var(--kumo-primary)" />
-    </div>
-    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--kumo-text)', marginBottom: 4 }}>{title}</div>
-    <div style={{ fontSize: 13.5, marginBottom: action ? 16 : 0 }}>{subtitle}</div>
-    {action}
-  </div>
-);
-
-// Floating isometric decorative shapes for headers
-const FloatingShapes = () => {
-  const shapes = [
-    { x: 78, y: 18, r: 22, rot: 12, kind: 'rect' },
-    { x: 92, y: 50, r: 16, rot: -10, kind: 'circle' },
-    { x: 62, y: 75, r: 18, rot: 25, kind: 'rect' },
-    { x: 18, y: 30, r: 14, rot: 8, kind: 'circle' },
-  ];
-  return (
-    <svg width="100%" height="100%" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"
-      style={{ position: 'absolute', inset: 0, opacity: 0.6, pointerEvents: 'none' }}>
-      {shapes.map((s, i) => (
-        s.kind === 'circle' ? (
-          <circle key={i} cx={s.x} cy={s.y} r={s.r / 2.2} fill="var(--kumo-accent)" opacity={0.35 - i * 0.05} />
-        ) : (
-          <rect key={i} x={s.x - s.r / 2} y={s.y - s.r / 2} width={s.r} height={s.r} rx={6}
-            fill="var(--kumo-primary)" opacity={0.20 - i * 0.03}
-            transform={`rotate(${s.rot} ${s.x} ${s.y})`} />
-        )
-      ))}
-    </svg>
-  );
-};
-
-// Modal
-const Modal = ({ title, onClose, children, width = 520 }) => (
-  <div
-    style={{
-      position: 'fixed', inset: 0, background: 'rgba(40,35,30,0.35)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center',
-      zIndex: 1000, padding: 16, backdropFilter: 'blur(2px)',
-    }}
-    onClick={onClose}
-  >
-    <div
-      onClick={e => e.stopPropagation()}
-      style={{
-        background: '#fff', borderRadius: 22, width: '100%', maxWidth: width,
-        maxHeight: '88vh', overflowY: 'auto', padding: '1.5rem',
-        boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-      }}
-    >
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{title}</h3>
-        <IconBtn icon={X} onClick={onClose} label="Close" />
-      </div>
-      {children}
-    </div>
-  </div>
-);
-
-const PageHeader = ({ title, subtitle, action, back, onBack }) => (
-  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, gap: 12, flexWrap: 'wrap' }}>
-    <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-      {back && <div style={{ marginTop: 4 }}><IconBtn icon={ArrowLeft} onClick={onBack} label="Back" /></div>}
-      <div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>{title}</h1>
-        {subtitle && <p style={{ margin: '4px 0 0', color: 'var(--kumo-text-soft)', fontSize: 13.5 }}>{subtitle}</p>}
-      </div>
-    </div>
-    {action}
-  </div>
-);
-
-const ConfirmDialog = ({ title, message, onConfirm, onCancel }) => (
-  <Modal title={title} onClose={onCancel} width={380}>
-    <p style={{ fontSize: 14, color: 'var(--kumo-text-soft)', marginTop: 0 }}>{message}</p>
-    <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
-      <Btn variant="ghost" onClick={onCancel}>Cancel</Btn>
-      <Btn variant="danger" onClick={onConfirm}>Delete</Btn>
-    </div>
-  </Modal>
-);
 
 // ============================================================
 // NAVIGATION
@@ -821,7 +354,7 @@ function TripsListPage({ data, setData, onOpenTrip }) {
 
 // ---------- Trip Dashboard (when a trip is selected) ----------
 
-function TripDashboard({ data, setData, trip, onNavigate }) {
+function TripDashboard({ data, setData, trip, onNavigate, onImport }) {
   const days = data.itineraryDays.filter(d => d.tripId === trip.id).sort((a,b) => a.date.localeCompare(b.date));
   const places = data.places.filter(p => p.tripId === trip.id);
   const memories = data.memories.filter(m => m.tripId === trip.id);
@@ -849,6 +382,9 @@ function TripDashboard({ data, setData, trip, onNavigate }) {
 
   return (
     <div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <Btn variant="secondary" size="sm" icon={Upload} onClick={onImport}>Import from Excel</Btn>
+      </div>
       <div style={{
         position: 'relative', borderRadius: 22, padding: '22px 24px', marginBottom: 20,
         background: trip.coverPhoto ? `linear-gradient(rgba(255,255,255,0.7),rgba(255,255,255,0.7)), url(${trip.coverPhoto}) center/cover` : 'var(--kumo-soft)',
@@ -1400,6 +936,7 @@ function PlacesPage({ data, setData, trip }) {
   const [search, setSearch] = useState('');
   const [catFilter, setCatFilter] = useState('All');
   const [statusFilter, setStatusFilter] = useState('All');
+  const [cityFilter, setCityFilter] = useState('All');
 
   if (!trip) {
     return <EmptyState icon={MapPin} title="Select a trip" subtitle="Choose a trip from the Trips page to manage its places." />;
@@ -1407,10 +944,12 @@ function PlacesPage({ data, setData, trip }) {
 
   const categories = data.settings.placeCategories || PLACE_CATEGORIES;
   const places = data.places.filter(p => p.tripId === trip.id);
+  const cities = [...new Set(places.map(p => p.city).filter(Boolean))].sort();
 
   const filtered = places.filter(p => {
     if (catFilter !== 'All' && p.category !== catFilter && p.customCategory !== catFilter) return false;
     if (statusFilter !== 'All' && p.status !== statusFilter) return false;
+    if (cityFilter !== 'All' && (p.city || '') !== cityFilter) return false;
     if (search && !`${p.name} ${p.notes} ${(p.tags||[]).join(' ')} ${p.customCategory}`.toLowerCase().includes(search.toLowerCase())) return false;
     return true;
   });
@@ -1451,6 +990,12 @@ function PlacesPage({ data, setData, trip }) {
           <option value="All">All statuses</option>
           {PLACE_STATUSES.map(s => <option key={s} value={s}>{s}</option>)}
         </select>
+        {cities.length > 0 && (
+          <select value={cityFilter} onChange={e => setCityFilter(e.target.value)} style={{ ...inputStyle, width: 'auto', fontWeight: 600 }}>
+            <option value="All">All cities</option>
+            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -2745,6 +2290,30 @@ function SettingsPage({ data, setData }) {
       </Card>
 
       <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <Sparkles size={16} /> AI-assisted import (optional)
+        </div>
+        <p style={{ fontSize: 13, color: 'var(--kumo-text-soft)', marginTop: 0, lineHeight: 1.6 }}>
+          When importing an Excel/CSV itinerary (from a trip's "Import from Excel" button),
+          Kumo automatically suggests how to map your columns. For trickier spreadsheets, you
+          can add your own Anthropic API key here to let Claude refine that mapping.
+        </p>
+        <Input
+          label="Anthropic API key"
+          type="password"
+          value={data.settings.anthropicApiKey || ''}
+          onChange={e => set('anthropicApiKey', e.target.value)}
+          placeholder="sk-ant-..."
+          style={{ maxWidth: 360 }}
+        />
+        <p style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginTop: 8 }}>
+          Stored only in your browser's local storage. When used, your spreadsheet headers and a
+          few sample rows are sent directly from your browser to Anthropic's API — never to Kumo
+          or any other server. Leave this blank to use the built-in offline mapping only.
+        </p>
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Import & export</div>
         <p style={{ fontSize: 13, color: 'var(--kumo-text-soft)', marginTop: 0 }}>Back up your entire travel archive, or restore from a previous export.</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -2752,6 +2321,10 @@ function SettingsPage({ data, setData }) {
           <Btn variant="outline" onClick={() => fileRef.current && fileRef.current.click()}>Import archive</Btn>
           <input ref={fileRef} type="file" accept="application/json" onChange={importAll} style={{ display: 'none' }} />
         </div>
+        <p style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginTop: 8 }}>
+          To import an itinerary, places, hotels, transport, or expenses from an Excel/CSV file,
+          open a trip and use its "Import from Excel" button.
+        </p>
       </Card>
 
       <Card>
@@ -2784,6 +2357,7 @@ export default function KumoApp() {
   const [activePage, setActivePage] = useState('trips');
   const [selectedTripId, setSelectedTripId] = useState(null);
   const [showMore, setShowMore] = useState(false);
+  const [showImport, setShowImport] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 820 : false);
 
   useEffect(() => {
@@ -2842,14 +2416,14 @@ export default function KumoApp() {
       break;
     case 'trip-dashboard':
       content = selectedTrip
-        ? <TripDashboard data={data} setData={setData} trip={selectedTrip} onNavigate={navigate} />
+        ? <TripDashboard data={data} setData={setData} trip={selectedTrip} onNavigate={navigate} onImport={() => setShowImport(true)} />
         : <EmptyState icon={Home} title="No trip selected" subtitle="Go to Trips and select one to see its dashboard." />;
       break;
     case 'itinerary':
       content = <ItineraryPage data={data} setData={setData} trip={selectedTrip} />;
       break;
     case 'places':
-      content = <PlacesPage data={data} setData={setData} trip={selectedTrip} />;
+      content = <PlacesPage key={selectedTrip ? selectedTrip.id : 'none'} data={data} setData={setData} trip={selectedTrip} />;
       break;
     case 'stays':
       content = <StaysPage data={data} setData={setData} trip={selectedTrip} />;
@@ -2914,6 +2488,9 @@ export default function KumoApp() {
 
       {isMobile && <MobileBottomNav active={activePage} onNavigate={navigate} onMore={() => setShowMore(true)} />}
       {isMobile && showMore && <MoreMenu active={activePage} onNavigate={navigate} onClose={() => setShowMore(false)} />}
+      {showImport && selectedTrip && (
+        <ImportWizard trip={selectedTrip} data={data} setData={setData} onClose={() => setShowImport(false)} />
+      )}
     </div>
   );
 }
