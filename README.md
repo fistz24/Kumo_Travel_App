@@ -19,6 +19,9 @@ ready to deploy to Vercel, Netlify, or any static host.
   Anthropic API key in **Settings** to let Claude refine the column mapping
   suggestions during import. This is entirely optional; the built-in offline
   mapping works without any key.
+- **Cloud sync (optional, free)** — sync your trips between devices (e.g.
+  phone ↔ desktop) using your own free Firebase project. See "Syncing
+  between devices" below.
 - **8 pastel themes**, Nunito typeface, mobile-friendly layout with no pinch/double-tap zoom
 
 ## Running locally
@@ -88,6 +91,46 @@ Anthropic API key in Settings:
   to `api.anthropic.com` — never through any Kumo server (there isn't one).
 - Leave the key blank to use only the built-in, offline heuristic mapping.
 
+## Syncing between devices
+
+By default, Kumo's data lives only in the browser you're using (localStorage),
+so it won't appear automatically on another device. Two ways to move data
+between devices, both free:
+
+### 1. Quick one-off transfer (no setup)
+
+Use **Settings → Export full archive (JSON)** on one device, transfer the
+file however you like (AirDrop, email, a synced Drive/Dropbox folder, USB),
+then **Import archive** on the other device. This includes everything,
+including photos and uploaded files.
+
+### 2. Ongoing cloud sync (free, your own Firebase project)
+
+For continuous syncing, connect your own free Firebase project in
+**Settings → Cloud sync**:
+
+1. Create a free project at [console.firebase.google.com](https://console.firebase.google.com)
+   (the Spark/no-cost plan is enough — personal trip data is nowhere near its
+   daily quotas).
+2. Enable **Firestore Database**.
+3. In Project settings → your web app, copy the `firebaseConfig` object and
+   paste it into Kumo's Cloud sync card.
+4. Click **Generate** to create a sync code, then enter that *same code* on
+   every device you want to sync. Treat the code like a password — anyone
+   with it (and reachable Firestore rules) can read/write that data.
+5. Check **"Keep this device automatically synced"** on each device.
+
+After that, changes auto-push to Firestore a couple of seconds after you stop
+editing, and each time you open Kumo it checks for newer data from another
+device and offers to load it.
+
+**What's synced:** trips, itinerary, places, stays, transport, routes,
+finances, memory text/ratings/tags, journal, passport progress, and settings.
+**What's not synced:** embedded photos and uploaded files (PDFs/images on
+places, hotels, transport, documents, memories) — these stay local to each
+device to keep documents small and within Firestore's free tier. Use the
+JSON export/import above for a full backup including those.
+
 ## Tech stack
 
 - React 18 + Vite
@@ -114,7 +157,8 @@ Anthropic API key in Settings:
     │   ├── constants.js         # shared constants (themes, currencies, etc.)
     │   ├── utils.js              # formatting/date helpers + demo data
     │   ├── useKumoData.js        # localStorage-backed data hook
-    │   └── excelImport.js        # spreadsheet parsing & mapping heuristics
+    │   ├── excelImport.js        # spreadsheet parsing & mapping heuristics
+    │   └── cloudSync.js          # optional Firebase-based cross-device sync
     └── components/
         ├── ui.jsx                # shared UI primitives (Card, Btn, Modal, ...)
         └── ImportWizard.jsx       # Excel/CSV import flow

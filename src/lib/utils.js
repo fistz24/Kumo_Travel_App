@@ -80,6 +80,13 @@ export const createDemoData = () => {
       expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
       placeCategories: [...PLACE_CATEGORIES],
       anthropicApiKey: '',
+      cloudSync: {
+        enabled: false,
+        firebaseConfigRaw: '',
+        syncCode: '',
+        lastPushedAtMs: 0,
+        lastPulledAtMs: 0,
+      },
     },
     trips: [
       {

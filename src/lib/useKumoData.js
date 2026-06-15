@@ -23,7 +23,19 @@ export function useKumoData() {
           expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
           placeCategories: [...PLACE_CATEGORIES],
           anthropicApiKey: '',
+          cloudSync: {
+            enabled: false,
+            firebaseConfigRaw: '',
+            syncCode: '',
+            lastPushedAtMs: 0,
+            lastPulledAtMs: 0,
+          },
           ...(parsed.settings || {}),
+        };
+        // Ensure nested cloudSync object always has all keys (older saves may be partial)
+        parsed.settings.cloudSync = {
+          enabled: false, firebaseConfigRaw: '', syncCode: '', lastPushedAtMs: 0, lastPulledAtMs: 0,
+          ...(parsed.settings.cloudSync || {}),
         };
         parsed.routes = parsed.routes || [];
         parsed.documents = parsed.documents || [];
