@@ -6,7 +6,7 @@ import {
   Trash2, Edit2, Check, Clock, FileText, Download,
   ExternalLink, Sparkles, Tag, MoreHorizontal,
   Plane, Bed, Footprints, Compass, GripVertical, PiggyBank, Stamp, Copy, Upload,
-  Cloud, RefreshCw, CheckCircle2, AlertTriangle, Loader2
+  Cloud, RefreshCw, CheckCircle2, AlertTriangle, Loader2, LogIn
 } from 'lucide-react';
 
 import {
@@ -25,8 +25,10 @@ import {
 } from './components/ui';
 import ImportWizard from './components/ImportWizard';
 import {
-  generateSyncCode, parseFirebaseConfig, pushToCloud, pullFromCloud, restoreAssets,
+  parseFirebaseConfig, pushToCloud, pullFromCloud, restoreAssets,
+  logoutUser, subscribeToAuthState,
 } from './lib/cloudSync';
+import AuthModal from './components/AuthModal';
 
 /* ============================================================
    KUMO — Personal Travel Operating System
@@ -54,7 +56,7 @@ const NAV_ITEMS = [
 // Mobile bottom nav shows a curated subset; rest reachable via "More"
 const MOBILE_PRIMARY = ['trips', 'itinerary', 'places', 'finances', 'memories'];
 
-function Sidebar({ active, onNavigate, tripName }) {
+function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
   return (
     <div style={{
       width: 230, flexShrink: 0, background: '#fff', borderRight: '1px solid rgba(0,0,0,0.04)',
@@ -98,6 +100,28 @@ function Sidebar({ active, onNavigate, tripName }) {
           );
         })}
       </nav>
+      <div style={{ borderTop: '1px solid var(--kumo-soft)', paddingTop: 12, marginTop: 8 }}>
+        {user ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 12, background: 'var(--kumo-soft)' }}>
+            <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--kumo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{(user.email || '?')[0].toUpperCase()}</span>
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 11.5, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+              <div style={{ fontSize: 10.5, color: '#3F8C7E', fontWeight: 700 }}>☁ Synced</div>
+            </div>
+          </div>
+        ) : (
+          <button onClick={onSignIn} style={{
+            width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
+            borderRadius: 14, border: '1.5px dashed var(--kumo-soft)', background: 'transparent',
+            cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5,
+            color: 'var(--kumo-text-soft)', textAlign: 'left',
+          }}>
+            <LogIn size={16} /> Sign in to sync
+          </button>
+        )}
+      </div>
     </div>
   );
 }
@@ -2230,186 +2254,118 @@ function PassportPage({ data }) {
 }
 
 // ============================================================
-// CLOUD SYNC — optional, free sync via the user's own Firebase project
+// CLOUD SYNC — auth-aware section used inside SettingsPage
 // ============================================================
 
-function CloudSyncCard({ data, setData }) {
-  const cloudSync = data.settings.cloudSync || {};
-  const [configText, setConfigText] = useState(cloudSync.firebaseConfigRaw || '');
-  const [status, setStatus] = useState({ state: 'idle', message: '' }); // idle | working | success | error
-  const [copied, setCopied] = useState(false);
+function SyncSection({ data, setData, onOpenAuth }) {
+  const cs = data.settings.cloudSync || {};
+  const user = cs.currentUser; // { uid, email } if signed in
+  const [status, setStatus] = useState({ state: 'idle', msg: '' });
 
-  const updateCloudSync = (patch) => setData(d => ({ ...d, settings: { ...d.settings, cloudSync: { ...d.settings.cloudSync, ...patch } } }));
+  const updateCs = patch => setData(d => ({
+    ...d, settings: { ...d.settings, cloudSync: { ...d.settings.cloudSync, ...patch } },
+  }));
 
-  const getConfig = () => parseFirebaseConfig(configText);
-  const configValid = !!getConfig();
-
-  const handleGenerateCode = () => updateCloudSync({ syncCode: generateSyncCode() });
-
-  const handleCopyCode = () => {
-    if (navigator.clipboard) navigator.clipboard.writeText(cloudSync.syncCode || '').catch(() => {});
-    setCopied(true);
-    setTimeout(() => setCopied(false), 1500);
-  };
+  const getConfig = () => parseFirebaseConfig(cs.firebaseConfigRaw || '');
+  const fmt = ms => ms ? new Date(ms).toLocaleString() : 'never';
 
   const handlePush = async () => {
     const config = getConfig();
-    if (!config || !cloudSync.syncCode) {
-      setStatus({ state: 'error', message: 'Add a valid Firebase config and a sync code first.' });
-      return;
-    }
-    setStatus({ state: 'working', message: 'Pushing your data to the cloud...' });
+    if (!config || !user) return;
+    setStatus({ state: 'working', msg: 'Pushing to cloud…' });
     try {
-      await pushToCloud(config, cloudSync.syncCode, data);
-      updateCloudSync({ firebaseConfigRaw: configText, lastPushedAtMs: Date.now() });
-      setStatus({ state: 'success', message: 'Pushed. Open Kumo on your other device and click "Pull from cloud" there.' });
-    } catch (err) {
-      setStatus({ state: 'error', message: err.message || 'Push failed.' });
-    }
+      await pushToCloud(config, user.uid, data);
+      updateCs({ lastPushedAtMs: Date.now() });
+      setStatus({ state: 'ok', msg: 'Pushed! Your other devices will receive updates next time they open Kumo.' });
+    } catch (e) { setStatus({ state: 'err', msg: e.message }); }
   };
 
   const handlePull = async () => {
     const config = getConfig();
-    if (!config || !cloudSync.syncCode) {
-      setStatus({ state: 'error', message: 'Add a valid Firebase config and a sync code first.' });
-      return;
-    }
-    setStatus({ state: 'working', message: 'Pulling the latest data from the cloud...' });
+    if (!config || !user) return;
+    setStatus({ state: 'working', msg: 'Fetching from cloud…' });
     try {
-      const result = await pullFromCloud(config, cloudSync.syncCode);
-      if (!result) {
-        setStatus({ state: 'error', message: "Nothing has been synced with this code yet. Push from your other device first." });
-        return;
-      }
+      const result = await pullFromCloud(config, user.uid);
+      if (!result) { setStatus({ state: 'err', msg: 'Nothing in the cloud yet — push from another device first.' }); return; }
       const merged = restoreAssets(result.data, data);
       merged.settings = {
         ...merged.settings,
         anthropicApiKey: data.settings.anthropicApiKey,
-        cloudSync: { ...data.settings.cloudSync, firebaseConfigRaw: configText, lastPulledAtMs: result.updatedAtMs || Date.now() },
+        cloudSync: { ...data.settings.cloudSync, lastPulledAtMs: result.updatedAtMs },
       };
       setData(merged);
-      setStatus({ state: 'success', message: 'Loaded the latest data from the cloud.' });
-    } catch (err) {
-      setStatus({ state: 'error', message: err.message || 'Pull failed.' });
-    }
+      setStatus({ state: 'ok', msg: 'Loaded latest data from cloud.' });
+    } catch (e) { setStatus({ state: 'err', msg: e.message }); }
   };
 
-  const handleToggleEnabled = (e) => {
-    const enabled = e.target.checked;
-    if (enabled && !getConfig()) {
-      setStatus({ state: 'error', message: 'Paste a valid Firebase config before enabling cloud sync.' });
-      return;
-    }
-    updateCloudSync({ enabled, firebaseConfigRaw: configText });
-    setStatus({ state: 'idle', message: '' });
+  const handleSignOut = async () => {
+    const config = getConfig();
+    if (!config) return;
+    try { await logoutUser(config); } catch {}
+    updateCs({ currentUser: null, lastPushedAtMs: 0, lastPulledAtMs: 0 });
+    setStatus({ state: 'idle', msg: '' });
   };
 
-  const fmtTimestamp = (ms) => ms ? new Date(ms).toLocaleString() : 'never';
+  const handleToggleAuto = e => updateCs({ autoSync: e.target.checked });
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Cloud size={16} /> Cloud sync (optional, free)
+      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <Cloud size={16} /> Sync across devices (free)
       </div>
-      <p style={{ fontSize: 13, color: 'var(--kumo-text-soft)', marginTop: 0, lineHeight: 1.7 }}>
-        Kumo stores everything in this browser only, so it won't automatically appear on
-        another device. To sync your trips between devices (e.g. phone ↔ desktop) at no
-        cost, connect your own free Firebase project:
-      </p>
-      <ol style={{ fontSize: 13, color: 'var(--kumo-text-soft)', lineHeight: 1.8, paddingLeft: 20, marginTop: 0 }}>
-        <li>Create a free project at <strong>console.firebase.google.com</strong> (Spark/no-cost plan).</li>
-        <li>Enable <strong>Firestore Database</strong> (start in test mode, or use the rules below).</li>
-        <li>In Project settings → your web app, copy the <strong>firebaseConfig</strong> object and paste it below.</li>
-        <li>Click <strong>Generate</strong> for a sync code, then enter that <em>same code</em> on your other device.</li>
-      </ol>
 
-      <TextArea
-        label="Firebase config (paste the object from the Firebase console)"
-        value={configText}
-        onChange={e => setConfigText(e.target.value)}
-        placeholder={'{\n  "apiKey": "...",\n  "authDomain": "your-project.firebaseapp.com",\n  "projectId": "your-project",\n  ...\n}'}
-        style={{ minHeight: 110, fontFamily: 'monospace', fontSize: 12 }}
-      />
-      {configText && !configValid && (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#C75C4A', marginTop: 6 }}>
-          <AlertTriangle size={14} /> This doesn't look like a valid Firebase config yet.
+      {!user ? (
+        /* ── Not signed in ── */
+        <div>
+          <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', marginTop: 0, lineHeight: 1.7 }}>
+            Your trips currently live only in this browser. Sign in to access them on any device — phone, tablet, or another computer.
+          </p>
+          <div style={{ background: 'var(--kumo-soft)', borderRadius: 14, padding: '12px 16px', marginBottom: 14, fontSize: 13, lineHeight: 1.7, color: 'var(--kumo-text-soft)' }}>
+            <strong style={{ color: 'var(--kumo-text)' }}>How it works:</strong> Kumo uses your own free Firebase account (Google's free backend service) to store your data securely. Setup takes about 5 minutes and needs no credit card. The in-app guide walks you through every click.
+          </div>
+          <Btn icon={LogIn} onClick={onOpenAuth}>Sign in / Set up sync</Btn>
+        </div>
+      ) : (
+        /* ── Signed in ── */
+        <div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
+            <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--kumo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{(user.email || '?')[0].toUpperCase()}</span>
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, fontSize: 14 }}>Signed in as {user.email}</div>
+              <div style={{ fontSize: 12, color: '#3F8C7E', fontWeight: 700 }}>☁ Cloud sync active</div>
+            </div>
+            <Btn variant="ghost" size="sm" onClick={handleSignOut} style={{ marginLeft: 'auto' }}>Sign out</Btn>
+          </div>
+
+          <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', marginBottom: 12 }}>
+            <input type="checkbox" checked={!!cs.autoSync} onChange={handleToggleAuto} />
+            Auto-sync changes as I edit
+          </label>
+
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Btn size="sm" variant="secondary" icon={status.state === 'working' ? Loader2 : RefreshCw} onClick={handlePush} disabled={status.state === 'working'}>Push to cloud</Btn>
+            <Btn size="sm" variant="secondary" icon={status.state === 'working' ? Loader2 : Cloud} onClick={handlePull} disabled={status.state === 'working'}>Pull from cloud</Btn>
+          </div>
+
+          {status.msg && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, marginTop: 10, color: status.state === 'err' ? '#C75C4A' : status.state === 'ok' ? '#3F8C7E' : 'var(--kumo-text-soft)' }}>
+              {status.state === 'err' ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+              {status.msg}
+            </div>
+          )}
+          <div style={{ fontSize: 11.5, color: 'var(--kumo-text-soft)', marginTop: 10 }}>
+            Last pushed: {fmt(cs.lastPushedAtMs)} · Last pulled: {fmt(cs.lastPulledAtMs)}
+          </div>
+          <details style={{ marginTop: 12 }}>
+            <summary style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', cursor: 'pointer' }}>What gets synced?</summary>
+            <p style={{ fontSize: 12, color: 'var(--kumo-text-soft)', lineHeight: 1.7, marginTop: 6 }}>
+              Trips, itinerary, places, stays, transport, routes, finances, memory text/ratings/tags, journal notes, passport progress, and settings. <strong>Photos and uploaded files stay on this device</strong> to keep data small and within Firebase's free limits. Use <em>Export full archive (JSON)</em> below for a complete backup.
+            </p>
+          </details>
         </div>
       )}
-
-      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end', flexWrap: 'wrap', marginTop: 12 }}>
-        <Input
-          label="Sync code (same on every device)"
-          value={cloudSync.syncCode || ''}
-          onChange={e => updateCloudSync({ syncCode: e.target.value })}
-          placeholder="Click Generate, or paste a code from another device"
-          style={{ flex: '1 1 200px', fontFamily: 'monospace' }}
-        />
-        <Btn variant="secondary" size="sm" onClick={handleGenerateCode}>Generate</Btn>
-        <Btn variant="secondary" size="sm" icon={Copy} onClick={handleCopyCode}>{copied ? 'Copied' : 'Copy'}</Btn>
-      </div>
-
-      <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13.5, fontWeight: 700, marginTop: 14, cursor: 'pointer' }}>
-        <input type="checkbox" checked={!!cloudSync.enabled} onChange={handleToggleEnabled} />
-        Keep this device automatically synced
-      </label>
-      <p style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginTop: 4, marginBottom: 12 }}>
-        When enabled, changes you make here are pushed to the cloud a couple of seconds after
-        you stop editing. When you open Kumo, it checks for newer data from another device and
-        offers to load it.
-      </p>
-
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Btn size="sm" variant="secondary" icon={status.state === 'working' ? Loader2 : RefreshCw} onClick={handlePush} disabled={status.state === 'working'}>
-          Push to cloud now
-        </Btn>
-        <Btn size="sm" variant="secondary" icon={status.state === 'working' ? Loader2 : Cloud} onClick={handlePull} disabled={status.state === 'working'}>
-          Pull from cloud now
-        </Btn>
-      </div>
-
-      {status.message && (
-        <div style={{
-          display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, marginTop: 10,
-          color: status.state === 'error' ? '#C75C4A' : status.state === 'success' ? '#3F8C7E' : 'var(--kumo-text-soft)',
-        }}>
-          {status.state === 'error' && <AlertTriangle size={14} />}
-          {status.state === 'success' && <CheckCircle2 size={14} />}
-          {status.message}
-        </div>
-      )}
-
-      <div style={{ fontSize: 11.5, color: 'var(--kumo-text-soft)', marginTop: 10 }}>
-        Last pushed: {fmtTimestamp(cloudSync.lastPushedAtMs)} · Last pulled: {fmtTimestamp(cloudSync.lastPulledAtMs)}
-      </div>
-
-      <details style={{ marginTop: 12 }}>
-        <summary style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', cursor: 'pointer' }}>
-          Firestore security rules &amp; what gets synced
-        </summary>
-        <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginTop: 8, lineHeight: 1.7 }}>
-          <p style={{ margin: '0 0 6px' }}>
-            In Firestore → Rules, you can use the following so only documents under{' '}
-            <code>kumo-sync</code> are accessible — your sync code acts as a shared secret,
-            so keep it private:
-          </p>
-          <pre style={{ background: 'var(--kumo-soft)', borderRadius: 10, padding: 10, overflowX: 'auto', fontSize: 11.5 }}>
-{`rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /kumo-sync/{code} {
-      allow read, write: if true;
-    }
-  }
-}`}
-          </pre>
-          <p style={{ margin: '8px 0 0' }}>
-            Photos and uploaded files (PDFs, images on places/hotels/transport/documents/memories)
-            stay on this device and are <strong>not</strong> sent to the cloud, to keep things
-            fast and within the free tier. Use <strong>Export full archive (JSON)</strong> below
-            for a complete backup including those.
-          </p>
-        </div>
-      </details>
     </Card>
   );
 }
@@ -2418,7 +2374,7 @@ service cloud.firestore {
 // SETTINGS
 // ============================================================
 
-function SettingsPage({ data, setData }) {
+function SettingsPage({ data, setData, onOpenAuth }) {
   const set = (k, v) => setData(d => ({ ...d, settings: { ...d.settings, [k]: v } }));
 
   const exportAll = () => {
@@ -2502,7 +2458,7 @@ function SettingsPage({ data, setData }) {
         </p>
       </Card>
 
-      <CloudSyncCard data={data} setData={setData} />
+      <SyncSection data={data} setData={setData} onOpenAuth={onOpenAuth} />
 
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Import & export</div>
@@ -2549,6 +2505,7 @@ export default function KumoApp() {
   const [selectedTripId, setSelectedTripId] = useState(null);
   const [showMore, setShowMore] = useState(false);
   const [showImport, setShowImport] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 820 : false);
   const [syncBanner, setSyncBanner] = useState(null); // { cloudData, updatedAtMs }
   const [syncReady, setSyncReady] = useState(false);
@@ -2570,15 +2527,15 @@ export default function KumoApp() {
     if (initialSyncCheckRef.current) return;
     initialSyncCheckRef.current = true;
     const cs = data.settings.cloudSync;
-    if (!cs || !cs.enabled) { setSyncReady(true); return; }
+    if (!cs || !cs.autoSync || !cs.currentUser) { setSyncReady(true); return; }
     const config = parseFirebaseConfig(cs.firebaseConfigRaw);
-    if (!config || !cs.syncCode) { setSyncReady(true); return; }
+    if (!config || !cs.currentUser?.uid) { setSyncReady(true); return; }
     (async () => {
       try {
-        const result = await pullFromCloud(config, cs.syncCode);
+        const result = await pullFromCloud(config, cs.currentUser.uid);
         if (!result) {
           // Nothing pushed yet from any device — seed the cloud with what we have
-          await pushToCloud(config, cs.syncCode, data);
+          await pushToCloud(config, cs.currentUser.uid, data);
           skipPushRef.current = true;
           setData(d => ({ ...d, settings: { ...d.settings, cloudSync: { ...d.settings.cloudSync, lastPushedAtMs: Date.now() } } }));
           setSyncReady(true);
@@ -2602,14 +2559,14 @@ export default function KumoApp() {
   useEffect(() => {
     if (!loaded || !data || !syncReady) return;
     const cs = data.settings.cloudSync;
-    if (!cs || !cs.enabled) return;
+    if (!cs || !cs.autoSync || !cs.currentUser) return;
     if (skipPushRef.current) { skipPushRef.current = false; return; }
     const config = parseFirebaseConfig(cs.firebaseConfigRaw);
-    if (!config || !cs.syncCode) return;
+    if (!config || !cs.currentUser?.uid) return;
     if (pushTimerRef.current) clearTimeout(pushTimerRef.current);
     pushTimerRef.current = setTimeout(async () => {
       try {
-        await pushToCloud(config, cs.syncCode, data);
+        await pushToCloud(config, cs.currentUser.uid, data);
         skipPushRef.current = true;
         setData(d => ({ ...d, settings: { ...d.settings, cloudSync: { ...d.settings.cloudSync, lastPushedAtMs: Date.now() } } }));
       } catch (err) {
@@ -2636,6 +2593,41 @@ export default function KumoApp() {
   const keepLocalData = () => {
     setSyncBanner(null);
     setSyncReady(true);
+  };
+
+  // Handle successful auth (sign-in or register)
+  const handleConnected = async ({ user, config, configRaw }) => {
+    setShowAuth(false);
+    // Persist auth state + config
+    setData(d => ({
+      ...d,
+      settings: {
+        ...d.settings,
+        cloudSync: {
+          ...d.settings.cloudSync,
+          firebaseConfigRaw: configRaw,
+          currentUser: { uid: user.uid, email: user.email },
+          autoSync: true,
+          lastPushedAtMs: 0,
+          lastPulledAtMs: 0,
+        },
+      },
+    }));
+    // Immediately try to pull cloud data and seed if nothing there yet
+    try {
+      const result = await pullFromCloud(config, user.uid);
+      if (result) {
+        setSyncBanner({ cloudData: result.data, updatedAtMs: result.updatedAtMs });
+      } else {
+        // First sign-in on this device — push local data up
+        await pushToCloud(config, user.uid, data);
+        setData(d => ({ ...d, settings: { ...d.settings, cloudSync: { ...d.settings.cloudSync, lastPushedAtMs: Date.now() } } }));
+        setSyncReady(true);
+      }
+    } catch (e) {
+      console.warn('Kumo: initial sync failed', e);
+      setSyncReady(true);
+    }
   };
 
   // Pages that require a selected trip — auto pick the first trip if none selected
@@ -2722,7 +2714,7 @@ export default function KumoApp() {
       content = <PassportPage data={data} />;
       break;
     case 'settings':
-      content = <SettingsPage data={data} setData={setData} />;
+      content = <SettingsPage data={data} setData={setData} onOpenAuth={() => setShowAuth(true)} />;
       break;
     default:
       content = <TripsListPage data={data} setData={setData} onOpenTrip={openTripDashboard} />;
@@ -2741,7 +2733,13 @@ export default function KumoApp() {
       `}</style>
 
       {!isMobile && (
-        <Sidebar active={activePage === 'trip-dashboard' ? 'trips' : activePage} onNavigate={navigate} tripName={selectedTrip ? selectedTrip.name : null} />
+        <Sidebar
+          active={activePage === 'trip-dashboard' ? 'trips' : activePage}
+          onNavigate={navigate}
+          tripName={selectedTrip ? selectedTrip.name : null}
+          user={data.settings.cloudSync?.currentUser || null}
+          onSignIn={() => setShowAuth(true)}
+        />
       )}
 
       <div style={{ flex: 1, minWidth: 0, paddingBottom: isMobile ? 70 : 0 }}>
@@ -2775,6 +2773,13 @@ export default function KumoApp() {
       {isMobile && showMore && <MoreMenu active={activePage} onNavigate={navigate} onClose={() => setShowMore(false)} />}
       {showImport && selectedTrip && (
         <ImportWizard trip={selectedTrip} data={data} setData={setData} onClose={() => setShowImport(false)} />
+      )}
+      {showAuth && (
+        <AuthModal
+          savedConfigRaw={data.settings.cloudSync?.firebaseConfigRaw || ''}
+          onConnected={handleConnected}
+          onClose={() => setShowAuth(false)}
+        />
       )}
     </div>
   );
