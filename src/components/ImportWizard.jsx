@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Sparkles, AlertTriangle, CheckCircle2, Loader2, ArrowRight } from 'lucide-react';
+import { Upload, FileSpreadsheet, Sparkles, TriangleAlert, CircleCheck, LoaderCircle, ArrowRight } from 'lucide-react';
 import { Modal, Btn, Card, Pill, inputStyle } from './ui';
 import {
   IMPORT_TYPES, IMPORT_TYPE_ORDER, parseWorkbook, detectSheetType, suggestMapping,
@@ -102,7 +102,7 @@ function SheetReviewCard({ sheet, config, onChangeType, onChangeMapping }) {
         <>
           {missingRequired.length > 0 && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#A8763E', background: '#F6E9D8', padding: '6px 10px', borderRadius: 10, marginBottom: 8 }}>
-              <AlertTriangle size={14} /> Map a column for: {missingRequired.join(', ')} (rows without this will be skipped)
+              <TriangleAlert size={14} /> Map a column for: {missingRequired.join(', ')} (rows without this will be skipped)
             </div>
           )}
           <div style={{ background: 'var(--kumo-soft)', borderRadius: 12, padding: '8px 12px' }}>
@@ -286,7 +286,7 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
           >
             {parsing ? (
               <>
-                <Loader2 size={28} color="var(--kumo-primary-text)" style={{ animation: 'kumo-spin 1s linear infinite' }} />
+                <LoaderCircle size={28} color="var(--kumo-primary-text)" style={{ animation: 'kumo-spin 1s linear infinite' }} />
                 <div style={{ marginTop: 10, fontWeight: 700, fontSize: 14 }}>Reading your file...</div>
               </>
             ) : (
@@ -301,7 +301,7 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
             onChange={e => handleFile(e.target.files[0])} />
           {error && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#C75C4A', marginTop: 12 }}>
-              <AlertTriangle size={15} /> {error}
+              <TriangleAlert size={15} /> {error}
             </div>
           )}
           <style>{`@keyframes kumo-spin { to { transform: rotate(360deg); } }`}</style>
@@ -316,7 +316,7 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
               imported, then check the column mapping below it.
             </p>
             {apiKey ? (
-              <Btn size="sm" variant="secondary" icon={aiState === 'loading' ? Loader2 : Sparkles} onClick={runAI} disabled={aiState === 'loading'}>
+              <Btn size="sm" variant="secondary" icon={aiState === 'loading' ? LoaderCircle : Sparkles} onClick={runAI} disabled={aiState === 'loading'}>
                 {aiState === 'loading' ? 'Analyzing...' : 'Enhance with AI'}
               </Btn>
             ) : (
@@ -325,12 +325,12 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
           </div>
           {aiState === 'error' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#C75C4A', marginBottom: 10 }}>
-              <AlertTriangle size={14} /> {aiError}
+              <TriangleAlert size={14} /> {aiError}
             </div>
           )}
           {aiState === 'done' && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#3F8C7E', marginBottom: 10 }}>
-              <CheckCircle2 size={14} /> AI suggestions applied — review below before importing.
+              <CircleCheck size={14} /> AI suggestions applied — review below before importing.
             </div>
           )}
 
@@ -356,7 +356,7 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
       {step === 'done' && summary && (
         <div>
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <CheckCircle2 size={40} color="#3F8C7E" />
+            <CircleCheck size={40} color="#3F8C7E" />
             <h3 style={{ margin: '12px 0 4px', fontSize: 18, fontWeight: 800 }}>Import complete</h3>
             <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', margin: 0 }}>Here's what was added to {trip.name}:</p>
           </div>

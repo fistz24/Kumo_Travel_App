@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   Mail, Lock, Eye, EyeOff, LogIn, UserPlus, Cloud,
-  CheckCircle2, AlertTriangle, Loader2, ExternalLink, ChevronDown, ChevronRight,
+  CircleCheck, TriangleAlert, LoaderCircle, ExternalLink, ChevronDown, ChevronRight,
 } from 'lucide-react';
 import { Modal, Btn, inputStyle } from './ui';
 import {
@@ -118,7 +118,7 @@ function SetupGuide({ onDone }) {
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 12, fontWeight: 800,
               }}>
-                {isDone ? <CheckCircle2 size={14} /> : i + 1}
+                {isDone ? <CircleCheck size={14} /> : i + 1}
               </div>
               <span style={{ flex: 1, fontWeight: 700, fontSize: 13.5 }}>Step {i + 1}: {step.title}</span>
               {isOpen ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
@@ -264,12 +264,12 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
             </label>
             {configRaw && !configValid && (
               <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#C75C4A', marginTop: 6 }}>
-                <AlertTriangle size={14} /> This doesn't look like a valid config yet — make sure you copied the full <code>{'{ ... }'}</code> object.
+                <TriangleAlert size={14} /> This doesn't look like a valid config yet — make sure you copied the full <code>{'{ ... }'}</code> object.
               </div>
             )}
             {err && <div style={{ color: '#C75C4A', fontSize: 13, marginTop: 8 }}>{err}</div>}
             <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
-              <Btn icon={CheckCircle2} onClick={handleConnect} disabled={!configValid}>Connect & continue</Btn>
+              <Btn icon={CircleCheck} onClick={handleConnect} disabled={!configValid}>Connect & continue</Btn>
               <Btn variant="ghost" onClick={() => setMode('intro')}>Back</Btn>
             </div>
           </div>
@@ -289,11 +289,11 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
           <PasswordInput label="Password" value={password} onChange={e => setPassword(e.target.value)} placeholder="Your password" />
           {err && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#C75C4A' }}>
-              <AlertTriangle size={14} /> {err}
+              <TriangleAlert size={14} /> {err}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn icon={busy ? Loader2 : LogIn} onClick={handleLogin} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Btn>
+            <Btn icon={busy ? LoaderCircle : LogIn} onClick={handleLogin} disabled={busy}>{busy ? 'Signing in…' : 'Sign in'}</Btn>
             <Btn variant="secondary" icon={UserPlus} onClick={() => { setErr(''); setMode('register'); }}>Create account</Btn>
           </div>
           <div style={{ display: 'flex', gap: 12, fontSize: 13, flexWrap: 'wrap' }}>
@@ -316,11 +316,11 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
           <PasswordInput label="Password (at least 6 characters)" value={password} onChange={e => setPassword(e.target.value)} placeholder="Choose a strong password" />
           {err && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#C75C4A' }}>
-              <AlertTriangle size={14} /> {err}
+              <TriangleAlert size={14} /> {err}
             </div>
           )}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn icon={busy ? Loader2 : UserPlus} onClick={handleRegister} disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</Btn>
+            <Btn icon={busy ? LoaderCircle : UserPlus} onClick={handleRegister} disabled={busy}>{busy ? 'Creating account…' : 'Create account'}</Btn>
             <Btn variant="ghost" onClick={() => { setErr(''); setMode('login'); }}>Back to sign in</Btn>
           </div>
         </div>
@@ -332,7 +332,7 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
           {resetSent ? (
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 15, color: '#3F8C7E', marginBottom: 8 }}>
-                <CheckCircle2 size={20} /> Email sent!
+                <CircleCheck size={20} /> Email sent!
               </div>
               <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', margin: '0 0 12px' }}>
                 Check your inbox at <strong>{email}</strong> for a password reset link. It might take a minute to arrive.
@@ -350,11 +350,11 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
               </label>
               {err && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#C75C4A' }}>
-                  <AlertTriangle size={14} /> {err}
+                  <TriangleAlert size={14} /> {err}
                 </div>
               )}
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Btn icon={busy ? Loader2 : Mail} onClick={handleReset} disabled={busy}>{busy ? 'Sending…' : 'Send reset email'}</Btn>
+                <Btn icon={busy ? LoaderCircle : Mail} onClick={handleReset} disabled={busy}>{busy ? 'Sending…' : 'Send reset email'}</Btn>
                 <Btn variant="ghost" onClick={() => { setErr(''); setMode('login'); }}>Back</Btn>
               </div>
             </>

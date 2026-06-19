@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Home, Calendar, MapPin, Train, Wallet as WalletIcon,
+  House, Calendar, MapPin, TrainFront, Wallet as WalletIcon,
   FolderOpen, Camera, BookOpen, Settings as SettingsIcon,
   Plus, X, ChevronRight, Search, Menu,
-  Trash2, Edit2, Check, Clock, FileText, Download,
-  ExternalLink, Sparkles, Tag, MoreHorizontal,
+  Trash2, Pencil, Check, Clock, FileText, Download,
+  ExternalLink, Sparkles, Tag, Ellipsis,
   Plane, Bed, Footprints, Compass, GripVertical, PiggyBank, Stamp, Copy, Upload,
-  Cloud, RefreshCw, CheckCircle2, AlertTriangle, Loader2, LogIn
+  Cloud, RefreshCw, CircleCheck, TriangleAlert, LoaderCircle, LogIn
 } from 'lucide-react';
 
 import {
@@ -39,11 +39,11 @@ import AuthModal from './components/AuthModal';
 // ============================================================
 
 const NAV_ITEMS = [
-  { id: 'trips', label: 'Trips', icon: Home },
+  { id: 'trips', label: 'Trips', icon: House },
   { id: 'itinerary', label: 'Itinerary', icon: Calendar },
   { id: 'places', label: 'Places', icon: MapPin },
   { id: 'stays', label: 'Stays', icon: Bed },
-  { id: 'transport', label: 'Transport', icon: Train },
+  { id: 'transport', label: 'Transport', icon: TrainFront },
   { id: 'routes', label: 'Routes', icon: Compass },
   { id: 'finances', label: 'Finances', icon: PiggyBank },
   { id: 'documents', label: 'Documents', icon: FolderOpen },
@@ -173,7 +173,7 @@ function MobileBottomNav({ active, onNavigate, onMore }) {
         border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 8px',
         color: 'var(--kumo-text-soft)', fontFamily: 'Nunito, sans-serif',
       }}>
-        <MoreHorizontal size={21} />
+        <Ellipsis size={21} />
         <span style={{ fontSize: 10.5, fontWeight: 700 }}>More</span>
       </button>
     </div>
@@ -280,7 +280,7 @@ function TripCard({ trip, onOpen, onEdit, onDelete }) {
           borderRadius: 999, background: sc.bg, color: sc.fg,
         }}>{trip.status}</span>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 4 }}>
-          <IconBtn icon={Edit2} size={15} onClick={(e) => { e.stopPropagation(); onEdit(trip); }} label="Edit trip" />
+          <IconBtn icon={Pencil} size={15} onClick={(e) => { e.stopPropagation(); onEdit(trip); }} label="Edit trip" />
           <IconBtn icon={Trash2} size={15} danger onClick={(e) => { e.stopPropagation(); onDelete(trip.id); }} label="Delete trip" />
         </div>
       </div>
@@ -348,7 +348,7 @@ function TripsListPage({ data, setData, onOpenTrip }) {
         ))}
       </div>
       {filtered.length === 0 ? (
-        <EmptyState icon={Home} title="No trips yet"
+        <EmptyState icon={House} title="No trips yet"
           subtitle="Create your first trip to start planning, capturing, and remembering."
           action={<Btn icon={Plus} onClick={() => setShowForm(true)}>Create a trip</Btn>} />
       ) : (
@@ -403,7 +403,7 @@ function TripDashboard({ data, setData, trip, onNavigate, onImport }) {
   // upcoming reservations: hotels + transport with dates >= today, sorted
   const upcoming = [
     ...hotels.map(h => ({ kind: 'Hotel', label: h.name, date: h.checkIn, icon: Bed })),
-    ...transport.map(t => ({ kind: t.type, label: `${t.departure} → ${t.arrival}`, date: t.date, icon: t.type === 'Flight' ? Plane : Train })),
+    ...transport.map(t => ({ kind: t.type, label: `${t.departure} → ${t.arrival}`, date: t.date, icon: t.type === 'Flight' ? Plane : TrainFront })),
   ].filter(r => r.date >= today).sort((a,b) => a.date.localeCompare(b.date)).slice(0, 4);
 
   const recentMemories = [...memories].sort((a,b) => (b.date||'').localeCompare(a.date||'')).slice(0, 3);
@@ -611,7 +611,7 @@ function ActivityRow({ activity, place, onToggle, onEdit, onDelete, dragHandlePr
         {activity.notes && <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', marginTop: 2 }}>{activity.notes}</div>}
       </div>
       <div style={{ display: 'flex', gap: 2 }}>
-        <IconBtn icon={Edit2} size={14} onClick={() => onEdit(activity)} label="Edit activity" />
+        <IconBtn icon={Pencil} size={14} onClick={() => onEdit(activity)} label="Edit activity" />
         <IconBtn icon={Trash2} size={14} danger onClick={() => onDelete(activity.id)} label="Delete activity" />
       </div>
     </div>
@@ -656,7 +656,7 @@ function DayCard({ day, activities, places, onUpdateDay, onDeleteDay, onAddActiv
           </div>
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
-          <IconBtn icon={Edit2} size={15} onClick={() => setEditingDay(true)} label="Edit day" />
+          <IconBtn icon={Pencil} size={15} onClick={() => setEditingDay(true)} label="Edit day" />
           <IconBtn icon={Trash2} size={15} danger onClick={() => onDeleteDay(day.id)} label="Delete day" />
         </div>
       </div>
@@ -923,7 +923,7 @@ function PlaceCard({ place, onEdit, onDelete, onStatusChange }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
-          <IconBtn icon={Edit2} size={14} onClick={() => onEdit(place)} label="Edit place" />
+          <IconBtn icon={Pencil} size={14} onClick={() => onEdit(place)} label="Edit place" />
           <IconBtn icon={Trash2} size={14} danger onClick={() => onDelete(place.id)} label="Delete place" />
         </div>
       </div>
@@ -1107,7 +1107,7 @@ function HotelCard({ hotel, onEdit, onDelete, onCopy }) {
           {hotel.address && <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', marginTop: 2 }}>{hotel.address}</div>}
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
-          <IconBtn icon={Edit2} size={14} onClick={() => onEdit(hotel)} label="Edit stay" />
+          <IconBtn icon={Pencil} size={14} onClick={() => onEdit(hotel)} label="Edit stay" />
           <IconBtn icon={Trash2} size={14} danger onClick={() => onDelete(hotel.id)} label="Delete stay" />
         </div>
       </div>
@@ -1194,7 +1194,7 @@ function StaysPage({ data, setData, trip }) {
 // TRANSPORT
 // ============================================================
 
-const TRANSPORT_ICONS = { Flight: Plane, Train: Train, Bus: Train, Metro: Train, 'Car Rental': Train, Ferry: Train, Taxi: Train };
+const TRANSPORT_ICONS = { Flight: Plane, TrainFront: TrainFront, Bus: TrainFront, Metro: TrainFront, 'Car Rental': TrainFront, Ferry: TrainFront, Taxi: TrainFront };
 
 function TransportFormModal({ item, tripId, defaultCurrency, onSave, onClose }) {
   const [form, setForm] = useState(item || {
@@ -1247,7 +1247,7 @@ function TransportFormModal({ item, tripId, defaultCurrency, onSave, onClose }) 
 }
 
 function TransportCard({ item, onEdit, onDelete }) {
-  const Icon = TRANSPORT_ICONS[item.type] || Train;
+  const Icon = TRANSPORT_ICONS[item.type] || TrainFront;
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
@@ -1263,7 +1263,7 @@ function TransportCard({ item, onEdit, onDelete }) {
           </div>
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
-          <IconBtn icon={Edit2} size={14} onClick={() => onEdit(item)} label="Edit transport" />
+          <IconBtn icon={Pencil} size={14} onClick={() => onEdit(item)} label="Edit transport" />
           <IconBtn icon={Trash2} size={14} danger onClick={() => onDelete(item.id)} label="Delete transport" />
         </div>
       </div>
@@ -1284,7 +1284,7 @@ function TransportPage({ data, setData, trip }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
 
   if (!trip) {
-    return <EmptyState icon={Train} title="Select a trip" subtitle="Choose a trip from the Trips page to manage transportation." />;
+    return <EmptyState icon={TrainFront} title="Select a trip" subtitle="Choose a trip from the Trips page to manage transportation." />;
   }
 
   const items = data.transport.filter(t => t.tripId === trip.id).sort((a,b) => (a.date||'').localeCompare(b.date||''));
@@ -1302,7 +1302,7 @@ function TransportPage({ data, setData, trip }) {
     <div>
       <PageHeader title="Transport" subtitle={`${trip.name} · ${items.length} segment${items.length === 1 ? '' : 's'}`} action={<Btn icon={Plus} onClick={() => setShowForm(true)}>Add transport</Btn>} />
       {items.length === 0 ? (
-        <EmptyState icon={Train} title="No transport added yet" subtitle="Add flights, trains, buses, ferries, or any way you'll get around."
+        <EmptyState icon={TrainFront} title="No transport added yet" subtitle="Add flights, trains, buses, ferries, or any way you'll get around."
           action={<Btn icon={Plus} onClick={() => setShowForm(true)}>Add transport</Btn>} />
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -1337,7 +1337,7 @@ function RouteFormModal({ route, tripId, onSave, onClose }) {
         </div>
         <div style={{ display: 'flex', gap: 10 }}>
           <Select label="Transport type" value={form.transportType} onChange={e => set('transportType', e.target.value)}>
-            {['Walking','Transit','Taxi','Car','Bike','Train'].map(t => <option key={t} value={t}>{t}</option>)}
+            {['Walking','Transit','Taxi','Car','Bike','TrainFront'].map(t => <option key={t} value={t}>{t}</option>)}
           </Select>
           <Input label="Travel time" value={form.travelTime} onChange={e => set('travelTime', e.target.value)} placeholder="25 min" />
           <Input label="Distance" value={form.distance} onChange={e => set('distance', e.target.value)} placeholder="1.8 km" />
@@ -1393,7 +1393,7 @@ function RoutesPage({ data, setData, trip }) {
                   {r.notes && <div style={{ fontSize: 13, marginTop: 6, lineHeight: 1.5 }}>{r.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 2 }}>
-                  <IconBtn icon={Edit2} size={14} onClick={() => { setEditing(r); setShowForm(true); }} label="Edit route" />
+                  <IconBtn icon={Pencil} size={14} onClick={() => { setEditing(r); setShowForm(true); }} label="Edit route" />
                   <IconBtn icon={Trash2} size={14} danger onClick={() => setConfirmDelete(r.id)} label="Delete route" />
                 </div>
               </div>
@@ -1488,7 +1488,7 @@ function DocCard({ doc, onEdit, onDelete }) {
                 <IconBtn icon={Download} size={14} label="Download" />
               </a>
             )}
-            <IconBtn icon={Edit2} size={14} onClick={() => onEdit(doc)} label="Edit document" />
+            <IconBtn icon={Pencil} size={14} onClick={() => onEdit(doc)} label="Edit document" />
             <IconBtn icon={Trash2} size={14} danger onClick={() => onDelete(doc.id)} label="Delete document" />
           </div>
         </div>
@@ -1749,7 +1749,7 @@ function FinancesPage({ data, setData, trip }) {
                   {e.notes && <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', marginTop: 2 }}>{e.notes}</div>}
                 </div>
                 <div style={{ display: 'flex', gap: 2 }}>
-                  <IconBtn icon={Edit2} size={14} onClick={() => { setEditing(e); setShowForm(true); }} label="Edit expense" />
+                  <IconBtn icon={Pencil} size={14} onClick={() => { setEditing(e); setShowForm(true); }} label="Edit expense" />
                   <IconBtn icon={Trash2} size={14} danger onClick={() => setConfirmDelete(e.id)} label="Delete expense" />
                 </div>
               </div>
@@ -1887,7 +1887,7 @@ function MemoryCard({ memory, onEdit, onDelete, onOpen }) {
         )}
         <div style={{ position: 'absolute', top: 8, right: 8, display: 'flex', gap: 2 }}>
           <div style={{ background: 'rgba(255,255,255,0.85)', borderRadius: 10 }}>
-            <IconBtn icon={Edit2} size={14} onClick={(e) => { e.stopPropagation(); onEdit(memory); }} label="Edit memory" />
+            <IconBtn icon={Pencil} size={14} onClick={(e) => { e.stopPropagation(); onEdit(memory); }} label="Edit memory" />
           </div>
           <div style={{ background: 'rgba(255,255,255,0.85)', borderRadius: 10 }}>
             <IconBtn icon={Trash2} size={14} danger onClick={(e) => { e.stopPropagation(); onDelete(memory.id); }} label="Delete memory" />
@@ -2000,7 +2000,7 @@ function MemoriesPage({ data, setData, trip }) {
                       <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)' }}>{fmtDate(m.date)}{m.location ? ` · ${m.location}` : ''}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 2 }}>
-                      <IconBtn icon={Edit2} size={14} onClick={(e) => { e.stopPropagation(); setEditing(m); setShowForm(true); }} label="Edit memory" />
+                      <IconBtn icon={Pencil} size={14} onClick={(e) => { e.stopPropagation(); setEditing(m); setShowForm(true); }} label="Edit memory" />
                       <IconBtn icon={Trash2} size={14} danger onClick={(e) => { e.stopPropagation(); setConfirmDelete(m.id); }} label="Delete memory" />
                     </div>
                   </div>
@@ -2345,13 +2345,13 @@ function SyncSection({ data, setData, onOpenAuth }) {
           </label>
 
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Btn size="sm" variant="secondary" icon={status.state === 'working' ? Loader2 : RefreshCw} onClick={handlePush} disabled={status.state === 'working'}>Push to cloud</Btn>
-            <Btn size="sm" variant="secondary" icon={status.state === 'working' ? Loader2 : Cloud} onClick={handlePull} disabled={status.state === 'working'}>Pull from cloud</Btn>
+            <Btn size="sm" variant="secondary" icon={status.state === 'working' ? LoaderCircle : RefreshCw} onClick={handlePush} disabled={status.state === 'working'}>Push to cloud</Btn>
+            <Btn size="sm" variant="secondary" icon={status.state === 'working' ? LoaderCircle : Cloud} onClick={handlePull} disabled={status.state === 'working'}>Pull from cloud</Btn>
           </div>
 
           {status.msg && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, marginTop: 10, color: status.state === 'err' ? '#C75C4A' : status.state === 'ok' ? '#3F8C7E' : 'var(--kumo-text-soft)' }}>
-              {status.state === 'err' ? <AlertTriangle size={14} /> : <CheckCircle2 size={14} />}
+              {status.state === 'err' ? <TriangleAlert size={14} /> : <CircleCheck size={14} />}
               {status.msg}
             </div>
           )}
@@ -2681,7 +2681,7 @@ export default function KumoApp() {
     case 'trip-dashboard':
       content = selectedTrip
         ? <TripDashboard data={data} setData={setData} trip={selectedTrip} onNavigate={navigate} onImport={() => setShowImport(true)} />
-        : <EmptyState icon={Home} title="No trip selected" subtitle="Go to Trips and select one to see its dashboard." />;
+        : <EmptyState icon={House} title="No trip selected" subtitle="Go to Trips and select one to see its dashboard." />;
       break;
     case 'itinerary':
       content = <ItineraryPage data={data} setData={setData} trip={selectedTrip} />;

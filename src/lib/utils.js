@@ -81,9 +81,9 @@ export const createDemoData = () => {
       placeCategories: [...PLACE_CATEGORIES],
       anthropicApiKey: '',
       cloudSync: {
-        enabled: false,
         firebaseConfigRaw: '',
-        syncCode: '',
+        currentUser: null,
+        autoSync: false,
         lastPushedAtMs: 0,
         lastPulledAtMs: 0,
       },

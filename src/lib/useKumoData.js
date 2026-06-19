@@ -16,25 +16,29 @@ export function useKumoData() {
       const raw = window.localStorage.getItem(STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        // Backfill settings for forward-compat
+        // Backfill settings for forward-compat — always spread parsed.settings LAST
+        // so user's saved values win over defaults.
+        const defaultCloudSync = {
+          firebaseConfigRaw: '',
+          currentUser: null,
+          autoSync: false,
+          lastPushedAtMs: 0,
+          lastPulledAtMs: 0,
+        };
         parsed.settings = {
-          theme: 'sky', defaultCurrency: 'USD', name: 'Traveler',
+          theme: 'sky',
+          defaultCurrency: 'USD',
+          name: 'Traveler',
           docCategories: [...DOC_CATEGORIES_DEFAULT],
           expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
           placeCategories: [...PLACE_CATEGORIES],
           anthropicApiKey: '',
-          cloudSync: {
-            enabled: false,
-            firebaseConfigRaw: '',
-            syncCode: '',
-            lastPushedAtMs: 0,
-            lastPulledAtMs: 0,
-          },
+          cloudSync: defaultCloudSync,
           ...(parsed.settings || {}),
         };
-        // Ensure nested cloudSync object always has all keys (older saves may be partial)
+        // Deep-merge cloudSync so any new keys are always present
         parsed.settings.cloudSync = {
-          enabled: false, firebaseConfigRaw: '', syncCode: '', lastPushedAtMs: 0, lastPulledAtMs: 0,
+          ...defaultCloudSync,
           ...(parsed.settings.cloudSync || {}),
         };
         parsed.routes = parsed.routes || [];
