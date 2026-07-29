@@ -624,14 +624,23 @@ function DayCard({ day, activities, places, onUpdateDay, onDeleteDay, onAddActiv
   const [editingDay, setEditingDay] = useState(false);
   const dragIndex = useRef(null);
 
-  const sorted = [...activities].sort((a,b) => (a.time||'').localeCompare(b.time||''));
+  // Activities keep an explicit `order` once manually dragged; otherwise they
+  // fall back to time-based sorting. Ordered activities always sort before
+  // unordered ones, so newly-added activities land at the end rather than
+  // jumping back to the top of a manually-arranged day.
+  const orderKey = (a) => (a.order !== undefined && a.order !== null) ? a.order : Infinity;
+  const sorted = [...activities].sort((a, b) => {
+    const oa = orderKey(a), ob = orderKey(b);
+    if (oa !== ob) return oa - ob;
+    return (a.time||'').localeCompare(b.time||'');
+  });
 
   const handleDrop = (toIndex) => {
     if (dragIndex.current === null || dragIndex.current === toIndex) return;
     const reordered = [...sorted];
     const [moved] = reordered.splice(dragIndex.current, 1);
     reordered.splice(toIndex, 0, moved);
-    onReorder(day.id, reordered.map((a, i) => ({ ...a, time: a.time }))); // time-based, but allow manual order via index hint
+    onReorder(day.id, reordered.map((a, i) => ({ ...a, order: i })));
     dragIndex.current = null;
   };
 

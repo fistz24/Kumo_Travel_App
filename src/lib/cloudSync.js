@@ -120,6 +120,10 @@ export function subscribeToAuthState(config, callback) {
 export function stripAssets(data) {
   return {
     ...data,
+    // The Anthropic API key is local-only — never write it to Firestore.
+    // (Callers already re-apply the local key after every pull, so the
+    // cloud copy was write-only and unused; better not to store it at all.)
+    settings: { ...data.settings, anthropicApiKey: '' },
     places:    (data.places    || []).map(p => ({ ...p, files: [] })),
     hotels:    (data.hotels    || []).map(h => ({ ...h, files: [] })),
     transport: (data.transport || []).map(t => ({ ...t, files: [] })),
