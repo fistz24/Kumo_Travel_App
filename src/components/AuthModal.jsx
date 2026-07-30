@@ -12,6 +12,15 @@ import {
    Step-by-step Firebase setup guide (inline, collapsible)
 ───────────────────────────────────────────────────────────────── */
 
+const tipStyle = {
+  background: 'var(--kumo-soft)', borderRadius: 10, padding: '8px 12px',
+  fontSize: 12.5, marginTop: 10, lineHeight: 1.6,
+};
+const codeStyle = {
+  background: 'var(--kumo-soft)', borderRadius: 10, padding: 12,
+  fontSize: 11.5, overflowX: 'auto', lineHeight: 1.6, marginTop: 8,
+};
+
 const STEPS = [
   {
     title: 'Create a free Firebase project',
@@ -81,15 +90,6 @@ service cloud.firestore {
     ),
   },
 ];
-
-const tipStyle = {
-  background: 'var(--kumo-soft)', borderRadius: 10, padding: '8px 12px',
-  fontSize: 12.5, marginTop: 10, lineHeight: 1.6,
-};
-const codeStyle = {
-  background: 'var(--kumo-soft)', borderRadius: 10, padding: 12,
-  fontSize: 11.5, overflowX: 'auto', lineHeight: 1.6, marginTop: 8,
-};
 
 function SetupGuide({ onDone }) {
   const [open, setOpen] = useState(0);
