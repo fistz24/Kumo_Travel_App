@@ -4,7 +4,6 @@ import {
   DOC_CATEGORIES_DEFAULT, EXPENSE_CATEGORIES_DEFAULT, PLACE_CATEGORIES,
 } from './constants';
 import { createDemoData } from './utils';
-import { BUILTIN_FIREBASE_CONFIG_RAW } from './cloudSync';
 
 export const STORAGE_KEY = 'kumo-data';
 
@@ -20,7 +19,7 @@ export function useKumoData() {
         // Backfill settings for forward-compat — always spread parsed.settings LAST
         // so user's saved values win over defaults.
         const defaultCloudSync = {
-          firebaseConfigRaw: BUILTIN_FIREBASE_CONFIG_RAW,
+          firebaseConfigRaw: '',
           currentUser: null,
           autoSync: false,
           lastPushedAtMs: 0,

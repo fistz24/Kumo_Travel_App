@@ -1,18 +1,5 @@
 // Kumo Cloud Sync — Firebase Auth + Firestore, free Spark plan.
 //
-// Built-in config for the kumo-travel-app Firebase project.
-export const BUILTIN_FIREBASE_CONFIG = {
-  apiKey: "AIzaSyDrCnqe4K1ldLJRxT85J02UEScJV3GcVJ8",
-  authDomain: "kumo-travel-app.firebaseapp.com",
-  projectId: "kumo-travel-app",
-  storageBucket: "kumo-travel-app.firebasestorage.app",
-  messagingSenderId: "35078511101",
-  appId: "1:35078511101:web:27f814f2a60306b940a194",
-  measurementId: "G-LZF5CRTW75",
-};
-export const BUILTIN_FIREBASE_CONFIG_RAW = JSON.stringify(BUILTIN_FIREBASE_CONFIG, null, 2);
-
-//
 // Each user signs in with email + password. Their data lives at:
 //   firestore: kumo-users/{uid}/data/main
 //
@@ -42,8 +29,6 @@ async function getMods() {
     getAuth: authMod.getAuth,
     createUserWithEmailAndPassword: authMod.createUserWithEmailAndPassword,
     signInWithEmailAndPassword: authMod.signInWithEmailAndPassword,
-    signInWithPopup: authMod.signInWithPopup,
-    GoogleAuthProvider: authMod.GoogleAuthProvider,
     signOut: authMod.signOut,
     onAuthStateChanged: authMod.onAuthStateChanged,
     sendPasswordResetEmail: authMod.sendPasswordResetEmail,
@@ -99,14 +84,6 @@ export async function loginUser(config, email, password) {
   const { mods, app } = await getApp(config);
   const auth = mods.getAuth(app);
   const cred = await mods.signInWithEmailAndPassword(auth, email, password);
-  return cred.user;
-}
-
-export async function loginWithGoogle(config) {
-  const { mods, app } = await getApp(config);
-  const auth = mods.getAuth(app);
-  const provider = new mods.GoogleAuthProvider();
-  const cred = await mods.signInWithPopup(auth, provider);
   return cred.user;
 }
 

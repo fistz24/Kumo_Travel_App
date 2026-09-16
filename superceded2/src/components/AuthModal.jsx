@@ -5,8 +5,7 @@ import {
 } from 'lucide-react';
 import { Modal, Btn, inputStyle } from './ui';
 import {
-  parseFirebaseConfig, loginUser, registerUser, loginWithGoogle, sendReset,
-  BUILTIN_FIREBASE_CONFIG, BUILTIN_FIREBASE_CONFIG_RAW,
+  parseFirebaseConfig, loginUser, registerUser, sendReset,
 } from '../lib/cloudSync';
 
 /* ─────────────────────────────────────────────────────────────────
@@ -172,14 +171,9 @@ function PasswordInput({ label, value, onChange, placeholder }) {
 }
 
 export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
-  const initialRaw = (savedConfigRaw && parseFirebaseConfig(savedConfigRaw))
-    ? savedConfigRaw
-    : BUILTIN_FIREBASE_CONFIG_RAW;
-  const [mode, setMode] = useState(
-    parseFirebaseConfig(initialRaw) ? 'login' : 'intro'
-  ); // intro | setup | login | register | reset
-  const [configRaw, setConfigRaw] = useState(initialRaw);
-  const [configSaved, setConfigSaved] = useState(!!parseFirebaseConfig(initialRaw));
+  const [mode, setMode] = useState('intro'); // intro | setup | login | register | reset
+  const [configRaw, setConfigRaw] = useState(savedConfigRaw || '');
+  const [configSaved, setConfigSaved] = useState(!!parseFirebaseConfig(savedConfigRaw));
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -227,17 +221,6 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
       setResetSent(true);
     } catch (e) {
       setErr(friendlyAuthError(e.code));
-    } finally { setBusy(false); }
-  };
-
-  const handleGoogle = async () => {
-    if (!configValid) { setErr('Firebase config is missing.'); return; }
-    setBusy(true); setErr('');
-    try {
-      const user = await loginWithGoogle(config);
-      onConnected({ user, config, configRaw: configRaw || BUILTIN_FIREBASE_CONFIG_RAW });
-    } catch (e) {
-      setErr(friendlyAuthError(e.code) || e.message);
     } finally { setBusy(false); }
   };
 
@@ -297,20 +280,8 @@ export default function AuthModal({ savedConfigRaw, onConnected, onClose }) {
       {mode === 'login' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <p style={{ margin: 0, fontSize: 13.5, color: 'var(--kumo-text-soft)' }}>
-            Sync your trips across devices. Sign in with Google, or use email and password.
+            Sign in with the email and password you used when you set up Kumo sync.
           </p>
-          <Btn
-            onClick={handleGoogle}
-            disabled={busy}
-            style={{ width: '100%', justifyContent: 'center', background: '#fff', color: '#1C1917', border: '1.5px solid #E7E5E4' }}
-          >
-            {busy ? 'Signing in…' : 'Continue with Google'}
-          </Btn>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '4px 0' }}>
-            <div style={{ flex: 1, height: 1, background: '#E7E5E4' }} />
-            <span style={{ fontSize: 12, color: 'var(--kumo-text-soft)', fontWeight: 700 }}>or email</span>
-            <div style={{ flex: 1, height: 1, background: '#E7E5E4' }} />
-          </div>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, fontWeight: 700, color: 'var(--kumo-text-soft)' }}>
             Email
             <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com" style={inputStyle} />
