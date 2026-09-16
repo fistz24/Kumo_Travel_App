@@ -20,6 +20,8 @@ body {
   font-family: 'Nunito', sans-serif;
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  background: var(--kumo-surface, #F7F4EF);
+  color: var(--kumo-text, #1C1917);
 }
 
 ::-webkit-scrollbar {

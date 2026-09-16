@@ -11,13 +11,15 @@ export const IconBtn = ({ icon: Icon, onClick, label, active, danger, size = 18 
     title={label}
     style={{
       display: 'flex', alignItems: 'center', justifyContent: 'center',
-      width: 36, height: 36, borderRadius: 12, border: 'none',
+      width: 40, height: 40, borderRadius: 12, border: 'none',
       background: active ? 'var(--kumo-soft)' : 'transparent',
       color: danger ? '#C75C4A' : 'var(--kumo-text)',
-      cursor: 'pointer', transition: 'background 0.15s', flexShrink: 0,
+      cursor: 'pointer', transition: 'background 0.15s, transform 0.1s', flexShrink: 0,
     }}
     onMouseEnter={e => { if (!active) e.currentTarget.style.background = 'var(--kumo-soft)'; }}
     onMouseLeave={e => { if (!active) e.currentTarget.style.background = 'transparent'; }}
+    onMouseDown={e => { e.currentTarget.style.transform = 'scale(0.94)'; }}
+    onMouseUp={e => { e.currentTarget.style.transform = 'scale(1)'; }}
   >
     <Icon size={size} />
   </button>
@@ -28,15 +30,15 @@ export const Card = ({ children, style, onClick, className }) => (
     className={className}
     onClick={onClick}
     style={{
-      background: '#fff', borderRadius: 18, padding: '1rem 1.25rem',
-      boxShadow: '0 2px 12px rgba(60,50,40,0.06)',
-      border: '1px solid rgba(0,0,0,0.03)',
+      background: '#fff', borderRadius: 24, padding: '16px 20px',
+      boxShadow: '0 4px 24px -4px rgba(28,25,23,0.08)',
+      border: '1px solid rgba(28,25,23,0.04)',
       cursor: onClick ? 'pointer' : 'default',
-      transition: 'transform 0.15s, box-shadow 0.15s',
+      transition: 'transform 0.18s ease, box-shadow 0.18s ease',
       ...style,
     }}
-    onMouseEnter={onClick ? (e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 6px 20px rgba(60,50,40,0.10)'; }) : undefined}
-    onMouseLeave={onClick ? (e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 2px 12px rgba(60,50,40,0.06)'; }) : undefined}
+    onMouseEnter={onClick ? (e => { e.currentTarget.style.transform = 'translateY(-2px)'; e.currentTarget.style.boxShadow = '0 8px 28px -4px rgba(28,25,23,0.12)'; }) : undefined}
+    onMouseLeave={onClick ? (e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 24px -4px rgba(28,25,23,0.08)'; }) : undefined}
   >
     {children}
   </div>
@@ -48,13 +50,14 @@ export const Btn = ({ children, onClick, variant = 'primary', size = 'md', icon:
     border: 'none', borderRadius: 14, cursor: disabled ? 'default' : 'pointer',
     fontFamily: 'Nunito, sans-serif', fontWeight: 700,
     fontSize: size === 'sm' ? 13 : 14.5,
-    padding: size === 'sm' ? '6px 12px' : '10px 18px',
-    transition: 'opacity 0.15s, transform 0.1s',
+    padding: size === 'sm' ? '8px 14px' : '11px 20px',
+    transition: 'opacity 0.15s, transform 0.12s, box-shadow 0.12s',
     opacity: disabled ? 0.5 : 1,
     whiteSpace: 'nowrap',
+    boxShadow: 'none',
   };
   const variants = {
-    primary: { background: 'var(--kumo-primary)', color: '#fff' },
+    primary: { background: 'var(--kumo-primary)', color: '#fff', boxShadow: '0 2px 12px -2px rgba(91,141,239,0.35)' },
     secondary: { background: 'var(--kumo-soft)', color: 'var(--kumo-text)' },
     ghost: { background: 'transparent', color: 'var(--kumo-text)' },
     danger: { background: '#FBEAE7', color: '#C75C4A' },
@@ -141,15 +144,16 @@ export const StarRating = ({ value = 0, onChange, size = 18 }) => (
 );
 
 export const EmptyState = ({ icon: Icon, title, subtitle, action }) => (
-  <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--kumo-text-soft)' }}>
+  <div style={{ textAlign: 'center', padding: '48px 16px', color: 'var(--kumo-text-soft)' }}>
     <div style={{
-      width: 64, height: 64, borderRadius: 20, background: 'var(--kumo-soft)',
-      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1rem',
+      width: 72, height: 72, borderRadius: 24, background: 'var(--kumo-soft)',
+      display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px',
+      boxShadow: '0 4px 16px rgba(127,168,217,0.12)',
     }}>
-      <Icon size={28} color="var(--kumo-primary)" />
+      <Icon size={30} color="var(--kumo-primary)" />
     </div>
-    <div style={{ fontWeight: 800, fontSize: 16, color: 'var(--kumo-text)', marginBottom: 4 }}>{title}</div>
-    <div style={{ fontSize: 13.5, marginBottom: action ? 16 : 0 }}>{subtitle}</div>
+    <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--kumo-text)', marginBottom: 6 }}>{title}</div>
+    <div style={{ fontSize: 14, lineHeight: 1.45, marginBottom: action ? 20 : 0, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>{subtitle}</div>
     {action}
   </div>
 );

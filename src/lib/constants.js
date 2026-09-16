@@ -3,14 +3,14 @@
 // ---------- Constants ----------
 
 export const PASTEL_THEMES = [
-  { id: 'sky',    name: 'Sky Mist',     primary: '#7FA8D9', accent: '#F4A896', surface: '#FAF7F2', soft: '#E8EEF7' },
-  { id: 'sage',   name: 'Sage Garden',  primary: '#8FAE8C', accent: '#F2C2A0', surface: '#F8F9F4', soft: '#E9F0E6' },
-  { id: 'lav',    name: 'Lavender Fog', primary: '#A89AD4', accent: '#F6C6CC', surface: '#FAF8FC', soft: '#EFEAF7' },
-  { id: 'peach',  name: 'Peach Sunset', primary: '#EFA98E', accent: '#9CC9C5', surface: '#FFF8F4', soft: '#FBEAE2' },
-  { id: 'mint',   name: 'Mint Cloud',   primary: '#7CBAB0', accent: '#F4C6A8', surface: '#F5FAF9', soft: '#E3F2EE' },
-  { id: 'sand',   name: 'Warm Sand',    primary: '#D2AC7A', accent: '#A8C4D9', surface: '#FCF8F2', soft: '#F2E7D6' },
-  { id: 'rose',   name: 'Dusty Rose',   primary: '#D08FA0', accent: '#A8C9B5', surface: '#FCF6F7', soft: '#F5E6EA' },
-  { id: 'slate',  name: 'Cloud Slate',  primary: '#90A4BD', accent: '#E8C2A0', surface: '#F7F8FA', soft: '#E8EDF2' },
+  { id: 'sky',    name: 'Sky Mist',     primary: '#5B8DEF', accent: '#E8D5C4', surface: '#F7F4EF', soft: '#E8F0FE' },
+  { id: 'sage',   name: 'Sage Garden',  primary: '#5B9A6E', accent: '#E8D5C4', surface: '#F5F7F4', soft: '#E3F0E6' },
+  { id: 'lav',    name: 'Lavender Fog', primary: '#8B7EC8', accent: '#E8D5C4', surface: '#F7F5FA', soft: '#EDE8F7' },
+  { id: 'peach',  name: 'Peach Sunset', primary: '#E08A6A', accent: '#A8C4D9', surface: '#FBF6F2', soft: '#FBEAE2' },
+  { id: 'mint',   name: 'Mint Cloud',   primary: '#4FA89A', accent: '#E8D5C4', surface: '#F4F9F8', soft: '#DFF0EC' },
+  { id: 'sand',   name: 'Warm Sand',    primary: '#C49A6C', accent: '#5B8DEF', surface: '#F9F5EF', soft: '#F2E9DC' },
+  { id: 'rose',   name: 'Dusty Rose',   primary: '#C97B8A', accent: '#A8C9B5', surface: '#FBF5F6', soft: '#F5E6EA' },
+  { id: 'slate',  name: 'Cloud Slate',  primary: '#6B8AAD', accent: '#E8D5C4', surface: '#F5F6F8', soft: '#E6ECF2' },
 ];
 
 export const CURRENCIES = [

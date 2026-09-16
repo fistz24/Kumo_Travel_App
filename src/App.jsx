@@ -63,13 +63,16 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
       display: 'flex', flexDirection: 'column', padding: '1.25rem 0.85rem', height: '100vh',
       position: 'sticky', top: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 0.5rem', marginBottom: 22 }}>
-        <div style={{
-          width: 38, height: 38, borderRadius: 12, background: 'var(--kumo-primary)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-        }}>
-          <Sparkles size={20} color="#fff" />
-        </div>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 0.5rem', marginBottom: 24 }}>
+        <img
+          src="/logo-192.png"
+          alt="Kumo"
+          style={{
+            width: 40, height: 40, borderRadius: 12, objectFit: 'cover',
+            boxShadow: '0 2px 8px rgba(127,168,217,0.35)', flexShrink: 0,
+            background: 'var(--kumo-soft)',
+          }}
+        />
         <div>
           <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: -0.3 }}>Kumo</div>
           <div style={{ fontSize: 11, color: 'var(--kumo-text-soft)', fontWeight: 600 }}>{tripName || 'No trip selected'}</div>
@@ -133,12 +136,15 @@ function MobileTopBar({ title, onMenu }) {
       background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.04)',
       position: 'sticky', top: 0, zIndex: 50,
     }}>
-      <div style={{
-        width: 32, height: 32, borderRadius: 10, background: 'var(--kumo-primary)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-      }}>
-        <Sparkles size={17} color="#fff" />
-      </div>
+      <img
+        src="/logo-192.png"
+        alt="Kumo"
+        style={{
+          width: 32, height: 32, borderRadius: 10, objectFit: 'cover',
+          boxShadow: '0 1px 6px rgba(127,168,217,0.3)', flexShrink: 0,
+          background: 'var(--kumo-soft)',
+        }}
+      />
       <div style={{ fontWeight: 800, fontSize: 16, flex: 1 }}>{title}</div>
       <IconBtn icon={Menu} onClick={onMenu} label="More" />
     </div>
@@ -148,9 +154,11 @@ function MobileTopBar({ title, onMenu }) {
 function MobileBottomNav({ active, onNavigate, onMore }) {
   return (
     <div style={{
-      position: 'fixed', bottom: 0, left: 0, right: 0, background: '#fff',
-      borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', justifyContent: 'space-around',
-      padding: '6px 4px 8px', zIndex: 60,
+      position: 'fixed', bottom: 0, left: 0, right: 0, background: 'rgba(255,255,255,0.96)',
+      backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
+      borderTop: '1px solid rgba(0,0,0,0.05)', display: 'flex', justifyContent: 'space-around',
+      padding: '8px 4px calc(8px + env(safe-area-inset-bottom, 0px))', zIndex: 60,
+      boxShadow: '0 -4px 20px rgba(60,50,40,0.04)',
     }}>
       {MOBILE_PRIMARY.map(id => {
         const item = NAV_ITEMS.find(n => n.id === id);
@@ -158,23 +166,38 @@ function MobileBottomNav({ active, onNavigate, onMore }) {
         const isActive = active === id;
         return (
           <button key={id} onClick={() => onNavigate(id)} style={{
-            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-            border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 8px',
+            display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+            border: 'none', background: 'transparent', cursor: 'pointer',
+            padding: '6px 10px', minWidth: 56, minHeight: 48,
             color: isActive ? 'var(--kumo-primary-text)' : 'var(--kumo-text-soft)',
-            fontFamily: 'Nunito, sans-serif',
+            fontFamily: 'Nunito, sans-serif', borderRadius: 14,
+            transition: 'color 0.15s, background 0.15s',
           }}>
-            <Icon size={21} />
-            <span style={{ fontSize: 10.5, fontWeight: 700 }}>{item.label}</span>
+            <div style={{
+              width: 40, height: 28, borderRadius: 14,
+              background: isActive ? 'var(--kumo-soft)' : 'transparent',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'background 0.15s',
+            }}>
+              <Icon size={20} strokeWidth={isActive ? 2.4 : 2} />
+            </div>
+            <span style={{ fontSize: 10.5, fontWeight: isActive ? 800 : 600 }}>{item.label}</span>
           </button>
         );
       })}
       <button onClick={onMore} style={{
-        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2,
-        border: 'none', background: 'transparent', cursor: 'pointer', padding: '4px 8px',
-        color: 'var(--kumo-text-soft)', fontFamily: 'Nunito, sans-serif',
+        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
+        border: 'none', background: 'transparent', cursor: 'pointer',
+        padding: '6px 10px', minWidth: 56, minHeight: 48,
+        color: 'var(--kumo-text-soft)', fontFamily: 'Nunito, sans-serif', borderRadius: 14,
       }}>
-        <Ellipsis size={21} />
-        <span style={{ fontSize: 10.5, fontWeight: 700 }}>More</span>
+        <div style={{
+          width: 40, height: 28, borderRadius: 14,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <Ellipsis size={20} />
+        </div>
+        <span style={{ fontSize: 10.5, fontWeight: 600 }}>More</span>
       </button>
     </div>
   );
@@ -2665,8 +2688,8 @@ export default function KumoApp() {
     '--kumo-accent': theme.accent,
     '--kumo-surface': theme.surface,
     '--kumo-soft': theme.soft,
-    '--kumo-text': '#3A352E',
-    '--kumo-text-soft': '#8F8A80',
+    '--kumo-text': '#1C1917',
+    '--kumo-text-soft': '#78716C',
     '--kumo-primary-text': theme.primary,
   };
 
