@@ -49,3 +49,25 @@ h1, h2, h3, .kumo-heading {
     font-size: 16px !important;
   }
 }
+
+/* App-like: safe areas for notched phones when installed as PWA */
+body {
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  /* Reduce rubber-band bounce feeling */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
+/* Standalone (installed) mode: hide any browser chrome leftovers */
+@media all and (display-mode: standalone) {
+  body {
+    user-select: none;
+  }
+  input, textarea, [contenteditable] {
+    user-select: text;
+  }
+}

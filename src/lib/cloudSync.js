@@ -42,8 +42,6 @@ async function getMods() {
     getAuth: authMod.getAuth,
     createUserWithEmailAndPassword: authMod.createUserWithEmailAndPassword,
     signInWithEmailAndPassword: authMod.signInWithEmailAndPassword,
-    signInWithPopup: authMod.signInWithPopup,
-    GoogleAuthProvider: authMod.GoogleAuthProvider,
     signOut: authMod.signOut,
     onAuthStateChanged: authMod.onAuthStateChanged,
     sendPasswordResetEmail: authMod.sendPasswordResetEmail,
@@ -99,14 +97,6 @@ export async function loginUser(config, email, password) {
   const { mods, app } = await getApp(config);
   const auth = mods.getAuth(app);
   const cred = await mods.signInWithEmailAndPassword(auth, email, password);
-  return cred.user;
-}
-
-export async function loginWithGoogle(config) {
-  const { mods, app } = await getApp(config);
-  const auth = mods.getAuth(app);
-  const provider = new mods.GoogleAuthProvider();
-  const cred = await mods.signInWithPopup(auth, provider);
   return cred.user;
 }
 

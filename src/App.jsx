@@ -30,6 +30,7 @@ import {
 } from './lib/cloudSync';
 import AuthModal from './components/AuthModal';
 import Onboarding from './components/Onboarding';
+import InstallPrompt from './components/InstallPrompt';
 
 /* ============================================================
    KUMO — Personal Travel Operating System
@@ -2445,7 +2446,7 @@ function SyncSection({ data, setData, onOpenAuth }) {
           </p>
           <ul style={{ margin: '0 0 14px', paddingLeft: 18, fontSize: 13, color: 'var(--kumo-text-soft)', lineHeight: 1.7 }}>
             <li>Sync trips across devices</li>
-            <li>Sign in with Google or email</li>
+            <li>Sign in with email</li>
             <li>Free — no credit card</li>
           </ul>
           <Btn icon={LogIn} onClick={onOpenAuth}>Sign in</Btn>
@@ -2573,6 +2574,18 @@ function SettingsPage({ data, setData, onOpenAuth }) {
           To import an itinerary, places, hotels, transport, or expenses from an Excel/CSV file,
           open a trip and use its "Import from Excel" button.
         </p>
+      </Card>
+
+      <Card style={{ marginBottom: 16 }}>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>Install as an app</div>
+        <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', lineHeight: 1.6, marginTop: 0 }}>
+          Kumo works in the browser, but you can install it on your home screen so it opens full-screen like a native app — no address bar, its own icon.
+        </p>
+        <ul style={{ margin: '0 0 4px', paddingLeft: 18, fontSize: 13, color: 'var(--kumo-text-soft)', lineHeight: 1.7 }}>
+          <li><strong>iPhone / iPad:</strong> Safari → Share → <em>Add to Home Screen</em></li>
+          <li><strong>Android:</strong> Chrome menu → <em>Install app</em> or <em>Add to Home screen</em></li>
+          <li><strong>Desktop:</strong> Chrome / Edge address bar → install icon</li>
+        </ul>
       </Card>
 
       <Card>
@@ -2922,6 +2935,7 @@ export default function KumoApp() {
           onSignIn={() => setShowAuth(true)}
         />
       )}
+      {!showOnboarding && <InstallPrompt />}
     </div>
   );
 }

@@ -55,3 +55,30 @@ ReactDOM.createRoot(document.getElementById('root')).render(
     </ErrorBoundary>
   </React.StrictMode>,
 )
+
+// Progressive Web App — installable + offline shell (browser only)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const isNative = !!(window.Capacitor && window.Capacitor.isNativePlatform && window.Capacitor.isNativePlatform());
+    if (isNative) return;
+    navigator.serviceWorker.register('/sw.js').catch((err) => {
+      console.warn('Kumo: service worker registration failed', err);
+    });
+  });
+}
+
+// Native iOS shell (Capacitor) — status bar + splash
+async function initNativeShell() {
+  try {
+    const { Capacitor } = await import('@capacitor/core');
+    if (!Capacitor.isNativePlatform()) return;
+    const { StatusBar, Style } = await import('@capacitor/status-bar');
+    await StatusBar.setStyle({ style: Style.Dark });
+    try { await StatusBar.setBackgroundColor({ color: '#F3EEE6' }); } catch (_) {}
+    const { SplashScreen } = await import('@capacitor/splash-screen');
+    await SplashScreen.hide();
+  } catch (_) {
+    // Browser without Capacitor — ignore
+  }
+}
+initNativeShell();

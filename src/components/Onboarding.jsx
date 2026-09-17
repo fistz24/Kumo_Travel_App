@@ -477,12 +477,9 @@ export default function Onboarding({ onComplete, onSignIn }) {
                 </div>
               </div>
               <div style={styles.spacer} />
-              <button type="button" style={styles.ctaGoogle} onClick={() => finish(true)}>
-                <span style={{ fontSize: 16, fontWeight: 600 }}>G</span> Continue with Google
-              </button>
               <button
                 type="button"
-                style={{ ...styles.ctaDark, marginTop: 10 }}
+                style={styles.cta}
                 onClick={() => finish(true)}
               >
                 Sign in with email
