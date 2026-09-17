@@ -141,7 +141,7 @@ export default function AuthModal({ onConnected, onClose }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               width: '100%', padding: '12px 16px', borderRadius: 14, cursor: busy ? 'wait' : 'pointer',
               background: '#fff', color: '#1C1917', border: '1.5px solid #E7E5E4',
-              fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14.5,
+              fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600, fontSize: 14.5,
             }}
           >
             <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden>
@@ -183,7 +183,7 @@ export default function AuthModal({ onConnected, onClose }) {
           <button
             type="button"
             onClick={() => { setErr(''); setResetSent(false); setMode('reset'); }}
-            style={{ border: 'none', background: 'none', color: 'var(--kumo-primary-text)', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'Nunito, sans-serif', padding: 0, alignSelf: 'flex-start' }}
+            style={{ border: 'none', background: 'none', color: 'var(--kumo-primary-text)', cursor: 'pointer', fontWeight: 700, fontSize: 13, fontFamily: 'Inter, system-ui, sans-serif', padding: 0, alignSelf: 'flex-start' }}
           >
             Forgot password?
           </button>
@@ -204,7 +204,7 @@ export default function AuthModal({ onConnected, onClose }) {
               display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
               width: '100%', padding: '12px 16px', borderRadius: 14, cursor: busy ? 'wait' : 'pointer',
               background: '#fff', color: '#1C1917', border: '1.5px solid #E7E5E4',
-              fontFamily: 'Nunito, sans-serif', fontWeight: 800, fontSize: 14.5,
+              fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600, fontSize: 14.5,
             }}
           >
             {busy ? 'Signing in…' : 'Continue with Google'}
@@ -241,7 +241,7 @@ export default function AuthModal({ onConnected, onClose }) {
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {resetSent ? (
             <div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 800, fontSize: 15, color: '#3F8C7E', marginBottom: 8 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontWeight: 600, fontSize: 15, color: '#3F8C7E', marginBottom: 8 }}>
                 <CircleCheck size={20} /> Email sent
               </div>
               <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', margin: '0 0 12px', lineHeight: 1.6 }}>

@@ -34,6 +34,8 @@ export function useKumoData() {
           expenseCategories: [...EXPENSE_CATEGORIES_DEFAULT],
           placeCategories: [...PLACE_CATEGORIES],
           anthropicApiKey: '',
+          visitedCountries: [],
+          travelStyle: null,
           cloudSync: defaultCloudSync,
           ...(parsed.settings || {}),
         };

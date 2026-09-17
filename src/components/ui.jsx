@@ -48,7 +48,7 @@ export const Btn = ({ children, onClick, variant = 'primary', size = 'md', icon:
   const base = {
     display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6,
     border: 'none', borderRadius: 14, cursor: disabled ? 'default' : 'pointer',
-    fontFamily: 'Nunito, sans-serif', fontWeight: 700,
+    fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 600,
     fontSize: size === 'sm' ? 13 : 14.5,
     padding: size === 'sm' ? '8px 14px' : '11px 20px',
     transition: 'opacity 0.15s, transform 0.12s, box-shadow 0.12s',
@@ -86,7 +86,7 @@ export const Field = ({ label, children }) => (
 );
 
 export const inputStyle = {
-  fontFamily: 'Nunito, sans-serif', fontSize: 14.5, fontWeight: 500,
+  fontFamily: 'Inter, system-ui, sans-serif', fontSize: 14.5, fontWeight: 500,
   padding: '9px 12px', borderRadius: 12, border: '1.5px solid var(--kumo-soft)',
   outline: 'none', color: 'var(--kumo-text)', background: '#fff', width: '100%', boxSizing: 'border-box',
 };
@@ -152,7 +152,7 @@ export const EmptyState = ({ icon: Icon, title, subtitle, action }) => (
     }}>
       <Icon size={30} color="var(--kumo-primary)" />
     </div>
-    <div style={{ fontWeight: 800, fontSize: 17, color: 'var(--kumo-text)', marginBottom: 6 }}>{title}</div>
+    <div style={{ fontWeight: 600, fontSize: 17, color: 'var(--kumo-text)', marginBottom: 6 }}>{title}</div>
     <div style={{ fontSize: 14, lineHeight: 1.45, marginBottom: action ? 20 : 0, maxWidth: 280, marginLeft: 'auto', marginRight: 'auto' }}>{subtitle}</div>
     {action}
   </div>
@@ -201,7 +201,7 @@ export const Modal = ({ title, onClose, children, width = 520 }) => (
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 800 }}>{title}</h3>
+        <h3 style={{ margin: 0, fontSize: 19, fontWeight: 600, fontFamily: 'Outfit, Inter, sans-serif' }}>{title}</h3>
         <IconBtn icon={X} onClick={onClose} label="Close" />
       </div>
       {children}
@@ -214,7 +214,7 @@ export const PageHeader = ({ title, subtitle, action, back, onBack }) => (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
       {back && <div style={{ marginTop: 4 }}><IconBtn icon={ArrowLeft} onClick={onBack} label="Back" /></div>}
       <div>
-        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0, letterSpacing: -0.3 }}>{title}</h1>
+        <h1 style={{ fontSize: 24, fontWeight: 600, margin: 0, letterSpacing: -0.3, fontFamily: 'Outfit, Inter, sans-serif' }}>{title}</h1>
         {subtitle && <p style={{ margin: '4px 0 0', color: 'var(--kumo-text-soft)', fontSize: 13.5 }}>{subtitle}</p>}
       </div>
     </div>

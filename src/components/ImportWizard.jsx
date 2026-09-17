@@ -1,9 +1,9 @@
 import React, { useState, useRef } from 'react';
-import { Upload, FileSpreadsheet, Sparkles, TriangleAlert, CircleCheck, LoaderCircle, ArrowRight } from 'lucide-react';
+import { Upload, FileSpreadsheet, TriangleAlert, CircleCheck, LoaderCircle, ArrowRight } from 'lucide-react';
 import { Modal, Btn, Card, Pill, inputStyle } from './ui';
 import {
   IMPORT_TYPES, IMPORT_TYPE_ORDER, parseWorkbook, detectSheetType, suggestMapping,
-  buildRecords, mergeRecordSets, aiSuggestMapping,
+  buildRecords, mergeRecordSets,
 } from '../lib/excelImport';
 
 const RECORD_LABELS = {
@@ -84,7 +84,7 @@ function SheetReviewCard({ sheet, config, onChangeType, onChangeMapping }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <FileSpreadsheet size={18} color="var(--kumo-primary-text)" />
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>{sheetName}</div>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{sheetName}</div>
             <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)' }}>{rows.length} row{rows.length === 1 ? '' : 's'}</div>
           </div>
         </div>
@@ -106,7 +106,7 @@ function SheetReviewCard({ sheet, config, onChangeType, onChangeMapping }) {
             </div>
           )}
           <div style={{ background: 'var(--kumo-soft)', borderRadius: 12, padding: '8px 12px' }}>
-            <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--kumo-text-soft)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+            <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--kumo-text-soft)', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 }}>
               Column mapping
             </div>
             {Object.entries(def.fields).map(([fieldKey, field]) => (
@@ -127,7 +127,7 @@ function SheetReviewCard({ sheet, config, onChangeType, onChangeMapping }) {
                 <thead>
                   <tr>
                     {Object.entries(def.fields).filter(([k]) => config.mapping[k]).map(([k, f]) => (
-                      <th key={k} style={{ textAlign: 'left', padding: '4px 8px', color: 'var(--kumo-text-soft)', fontWeight: 800, borderBottom: '1px solid var(--kumo-soft)', whiteSpace: 'nowrap' }}>{f.label}</th>
+                      <th key={k} style={{ textAlign: 'left', padding: '4px 8px', color: 'var(--kumo-text-soft)', fontWeight: 600, borderBottom: '1px solid var(--kumo-soft)', whiteSpace: 'nowrap' }}>{f.label}</th>
                     ))}
                   </tr>
                 </thead>
@@ -157,12 +157,8 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
   const [configs, setConfigs] = useState({}); // sheetName -> { type, mapping }
   const [error, setError] = useState('');
   const [parsing, setParsing] = useState(false);
-  const [aiState, setAiState] = useState('idle'); // idle | loading | done | error
-  const [aiError, setAiError] = useState('');
   const [summary, setSummary] = useState(null);
   const fileRef = useRef(null);
-
-  const apiKey = (data.settings.anthropicApiKey || '').trim();
 
   const handleFile = async (file) => {
     if (!file) return;
@@ -215,41 +211,6 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
     }));
   };
 
-  const runAI = async () => {
-    if (!apiKey) return;
-    setAiState('loading');
-    setAiError('');
-    try {
-      const suggestions = await aiSuggestMapping(sheets, apiKey);
-      setConfigs(prev => {
-        const next = { ...prev };
-        for (const sheet of sheets) {
-          const s = suggestions[sheet.sheetName];
-          if (!s) continue;
-          const type = IMPORT_TYPE_ORDER.includes(s.suggestedType) ? s.suggestedType : null;
-          if (!type) {
-            next[sheet.sheetName] = { type: null, mapping: {} };
-            continue;
-          }
-          const validMapping = {};
-          const def = IMPORT_TYPES[type];
-          for (const [fieldKey, header] of Object.entries(s.mapping || {})) {
-            if (def.fields[fieldKey] && sheet.headers.includes(header)) {
-              validMapping[fieldKey] = header;
-            }
-          }
-          next[sheet.sheetName] = { type, mapping: validMapping };
-        }
-        return next;
-      });
-      setAiState('done');
-    } catch (err) {
-      console.error(err);
-      setAiError(err.message || 'AI suggestion failed.');
-      setAiState('error');
-    }
-  };
-
   const doImport = () => {
     const sets = [];
     for (const sheet of sheets) {
@@ -292,7 +253,7 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
             ) : (
               <>
                 <Upload size={28} color="var(--kumo-primary-text)" />
-                <div style={{ marginTop: 10, fontWeight: 800, fontSize: 15 }}>Click to choose a file, or drag it here</div>
+                <div style={{ marginTop: 10, fontWeight: 600, fontSize: 15 }}>Click to choose a file, or drag it here</div>
                 <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', marginTop: 4 }}>.xlsx, .xls, or .csv</div>
               </>
             )}
@@ -310,29 +271,10 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
 
       {step === 'review' && (
         <div>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
-            <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', margin: 0 }}>
-              Found {sheets.length} sheet{sheets.length === 1 ? '' : 's'}. Choose how each one should be
-              imported, then check the column mapping below it.
-            </p>
-            {apiKey ? (
-              <Btn size="sm" variant="secondary" icon={aiState === 'loading' ? LoaderCircle : Sparkles} onClick={runAI} disabled={aiState === 'loading'}>
-                {aiState === 'loading' ? 'Analyzing...' : 'Enhance with AI'}
-              </Btn>
-            ) : (
-              <Pill icon={Sparkles}>Add an Anthropic API key in Settings for AI-assisted mapping</Pill>
-            )}
-          </div>
-          {aiState === 'error' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#C75C4A', marginBottom: 10 }}>
-              <TriangleAlert size={14} /> {aiError}
-            </div>
-          )}
-          {aiState === 'done' && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12.5, color: '#3F8C7E', marginBottom: 10 }}>
-              <CircleCheck size={14} /> AI suggestions applied — review below before importing.
-            </div>
-          )}
+          <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', margin: '0 0 12px' }}>
+            Found {sheets.length} sheet{sheets.length === 1 ? '' : 's'}. Choose how each one should be
+            imported, then check the column mapping below it. Mapping is suggested automatically — adjust anything that looks off.
+          </p>
 
           {sheets.map(sheet => (
             <SheetReviewCard
@@ -357,7 +299,7 @@ export default function ImportWizard({ trip, data, setData, onClose }) {
         <div>
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <CircleCheck size={40} color="#3F8C7E" />
-            <h3 style={{ margin: '12px 0 4px', fontSize: 18, fontWeight: 800 }}>Import complete</h3>
+            <h3 style={{ margin: '12px 0 4px', fontSize: 18, fontWeight: 600 }}>Import complete</h3>
             <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', margin: 0 }}>Here's what was added to {trip.name}:</p>
           </div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, justifyContent: 'center', marginBottom: 16 }}>

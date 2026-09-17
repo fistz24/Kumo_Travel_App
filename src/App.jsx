@@ -29,6 +29,7 @@ import {
   logoutUser, subscribeToAuthState,
 } from './lib/cloudSync';
 import AuthModal from './components/AuthModal';
+import Onboarding from './components/Onboarding';
 
 /* ============================================================
    KUMO — Personal Travel Operating System
@@ -50,7 +51,7 @@ const NAV_ITEMS = [
   { id: 'memories', label: 'Memories', icon: Camera },
   { id: 'journal', label: 'Journal', icon: BookOpen },
   { id: 'passport', label: 'Passport', icon: Stamp },
-  { id: 'settings', label: 'Settings', icon: SettingsIcon },
+  { id: 'settings', label: 'Account', icon: SettingsIcon },
 ];
 
 // Mobile bottom nav shows a curated subset; rest reachable via "More"
@@ -63,20 +64,16 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
       display: 'flex', flexDirection: 'column', padding: '1.25rem 0.85rem', height: '100vh',
       position: 'sticky', top: 0,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 0.5rem', marginBottom: 24 }}>
+      <div style={{ padding: '0 0.5rem', marginBottom: 24 }}>
         <img
-          src="/logo-192.png"
+          src="/kumo-wordmark.png"
           alt="Kumo"
           style={{
-            width: 40, height: 40, borderRadius: 12, objectFit: 'cover',
-            boxShadow: '0 2px 8px rgba(127,168,217,0.35)', flexShrink: 0,
-            background: 'var(--kumo-soft)',
+            height: 28, width: 'auto', maxWidth: '100%', objectFit: 'contain',
+            display: 'block', marginBottom: 4,
           }}
         />
-        <div>
-          <div style={{ fontWeight: 800, fontSize: 18, letterSpacing: -0.3 }}>Kumo</div>
-          <div style={{ fontSize: 11, color: 'var(--kumo-text-soft)', fontWeight: 600 }}>{tripName || 'No trip selected'}</div>
-        </div>
+        <div style={{ fontSize: 11, color: 'var(--kumo-text-soft)', fontWeight: 500 }}>{tripName || 'No trip selected'}</div>
       </div>
       <nav style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflowY: 'auto' }}>
         {NAV_ITEMS.map(item => {
@@ -91,7 +88,7 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
                 borderRadius: 14, border: 'none', cursor: 'pointer', textAlign: 'left',
                 background: isActive ? 'var(--kumo-soft)' : 'transparent',
                 color: isActive ? 'var(--kumo-primary-text)' : 'var(--kumo-text)',
-                fontFamily: 'Nunito, sans-serif', fontWeight: isActive ? 800 : 600, fontSize: 14.5,
+                fontFamily: 'Inter, system-ui, sans-serif', fontWeight: isActive ? 800 : 600, fontSize: 14.5,
                 transition: 'background 0.15s',
               }}
               onMouseEnter={e => { if (!isActive) e.currentTarget.style.background = 'rgba(0,0,0,0.025)'; }}
@@ -112,14 +109,14 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
             style={{
               width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
               borderRadius: 12, background: 'var(--kumo-soft)', border: 'none', cursor: 'pointer',
-              fontFamily: 'Nunito, sans-serif', textAlign: 'left',
+              fontFamily: 'Inter, system-ui, sans-serif', textAlign: 'left',
             }}
           >
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--kumo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{(user.email || '?')[0].toUpperCase()}</span>
+              <span style={{ color: '#fff', fontWeight: 600, fontSize: 12 }}>{(user.email || '?')[0].toUpperCase()}</span>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--kumo-text)' }}>{user.email}</div>
+              <div style={{ fontSize: 11.5, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--kumo-text)' }}>{user.email}</div>
               <div style={{ fontSize: 10.5, color: '#3F8C7E', fontWeight: 700 }}>Account · Synced</div>
             </div>
           </button>
@@ -127,7 +124,7 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
           <button onClick={onSignIn} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
             borderRadius: 14, border: '1.5px dashed var(--kumo-soft)', background: 'transparent',
-            cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5,
+            cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', fontWeight: 700, fontSize: 13.5,
             color: 'var(--kumo-text-soft)', textAlign: 'left',
           }}>
             <LogIn size={16} /> Sign in
@@ -138,10 +135,10 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
   );
 }
 
-function MobileTopBar({ title, onMenu }) {
+function MobileTopBar({ title, onMenu, user, onAccount, onSignIn }) {
   return (
     <div style={{
-      display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px',
+      display: 'flex', alignItems: 'center', gap: 8, padding: '12px 16px',
       background: '#fff', borderBottom: '1px solid rgba(0,0,0,0.04)',
       position: 'sticky', top: 0, zIndex: 50,
     }}>
@@ -154,7 +151,33 @@ function MobileTopBar({ title, onMenu }) {
           background: 'var(--kumo-soft)',
         }}
       />
-      <div style={{ fontWeight: 800, fontSize: 16, flex: 1 }}>{title}</div>
+      <div style={{ fontWeight: 600, fontSize: 16, flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
+      {user ? (
+        <button
+          type="button"
+          onClick={onAccount}
+          aria-label="Account"
+          style={{
+            width: 34, height: 34, borderRadius: '50%', border: 'none', cursor: 'pointer',
+            background: 'var(--kumo-primary)', color: '#fff', fontWeight: 600, fontSize: 13,
+            fontFamily: 'Inter, system-ui, sans-serif', flexShrink: 0,
+          }}
+        >
+          {(user.email || '?')[0].toUpperCase()}
+        </button>
+      ) : (
+        <button
+          type="button"
+          onClick={onSignIn}
+          style={{
+            border: 'none', background: 'var(--kumo-soft)', color: 'var(--kumo-primary-text)',
+            borderRadius: 999, padding: '7px 12px', fontWeight: 600, fontSize: 12.5,
+            fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', flexShrink: 0,
+          }}
+        >
+          Sign in
+        </button>
+      )}
       <IconBtn icon={Menu} onClick={onMenu} label="More" />
     </div>
   );
@@ -179,7 +202,7 @@ function MobileBottomNav({ active, onNavigate, onMore }) {
             border: 'none', background: 'transparent', cursor: 'pointer',
             padding: '6px 10px', minWidth: 56, minHeight: 48,
             color: isActive ? 'var(--kumo-primary-text)' : 'var(--kumo-text-soft)',
-            fontFamily: 'Nunito, sans-serif', borderRadius: 14,
+            fontFamily: 'Inter, system-ui, sans-serif', borderRadius: 14,
             transition: 'color 0.15s, background 0.15s',
           }}>
             <div style={{
@@ -198,7 +221,7 @@ function MobileBottomNav({ active, onNavigate, onMore }) {
         display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
         border: 'none', background: 'transparent', cursor: 'pointer',
         padding: '6px 10px', minWidth: 56, minHeight: 48,
-        color: 'var(--kumo-text-soft)', fontFamily: 'Nunito, sans-serif', borderRadius: 14,
+        color: 'var(--kumo-text-soft)', fontFamily: 'Inter, system-ui, sans-serif', borderRadius: 14,
       }}>
         <div style={{
           width: 40, height: 28, borderRadius: 14,
@@ -212,11 +235,51 @@ function MobileBottomNav({ active, onNavigate, onMore }) {
   );
 }
 
-function MoreMenu({ active, onNavigate, onClose }) {
-  const rest = NAV_ITEMS.filter(n => !MOBILE_PRIMARY.includes(n.id));
+function MoreMenu({ active, onNavigate, onClose, user, onSignIn }) {
+  const rest = NAV_ITEMS.filter(n => !MOBILE_PRIMARY.includes(n.id) && n.id !== 'settings');
   return (
     <Modal title="More" onClose={onClose} width={360}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {/* Account always first and obvious */}
+        <button
+          type="button"
+          onClick={() => {
+            if (user) { onNavigate('settings'); onClose(); }
+            else { onClose(); onSignIn(); }
+          }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '14px',
+            borderRadius: 16, border: '1.5px solid var(--kumo-soft)', cursor: 'pointer',
+            textAlign: 'left', background: 'var(--kumo-soft)', marginBottom: 8,
+            color: 'var(--kumo-text)', fontFamily: 'Inter, system-ui, sans-serif', width: '100%',
+          }}
+        >
+          <div style={{
+            width: 40, height: 40, borderRadius: '50%', background: user ? 'var(--kumo-primary)' : '#fff',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            border: user ? 'none' : '1.5px dashed var(--kumo-primary)',
+          }}>
+            {user ? (
+              <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{(user.email || '?')[0].toUpperCase()}</span>
+            ) : (
+              <LogIn size={18} color="var(--kumo-primary-text)" />
+            )}
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {user ? (
+              <>
+                <div style={{ fontWeight: 600, fontSize: 14.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
+                <div style={{ fontSize: 12, color: '#3F8C7E', fontWeight: 700 }}>Account · Synced</div>
+              </>
+            ) : (
+              <>
+                <div style={{ fontWeight: 600, fontSize: 14.5 }}>Sign in</div>
+                <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)', fontWeight: 600 }}>Sync trips across devices</div>
+              </>
+            )}
+          </div>
+        </button>
+
         {rest.map(item => {
           const Icon = item.icon;
           const isActive = active === item.id;
@@ -228,7 +291,7 @@ function MoreMenu({ active, onNavigate, onClose }) {
                 display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
                 borderRadius: 14, border: 'none', cursor: 'pointer', textAlign: 'left',
                 background: isActive ? 'var(--kumo-soft)' : 'transparent',
-                color: 'var(--kumo-text)', fontFamily: 'Nunito, sans-serif',
+                color: 'var(--kumo-text)', fontFamily: 'Inter, system-ui, sans-serif',
                 fontWeight: isActive ? 800 : 600, fontSize: 15,
               }}
             >
@@ -237,6 +300,22 @@ function MoreMenu({ active, onNavigate, onClose }) {
             </button>
           );
         })}
+
+        {/* Settings / Account page also listed for signed-in users */}
+        <button
+          type="button"
+          onClick={() => { onNavigate('settings'); onClose(); }}
+          style={{
+            display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px',
+            borderRadius: 14, border: 'none', cursor: 'pointer', textAlign: 'left',
+            background: active === 'settings' ? 'var(--kumo-soft)' : 'transparent',
+            color: 'var(--kumo-text)', fontFamily: 'Inter, system-ui, sans-serif',
+            fontWeight: active === 'settings' ? 800 : 600, fontSize: 15,
+          }}
+        >
+          <SettingsIcon size={20} />
+          Account &amp; settings
+        </button>
       </div>
     </Modal>
   );
@@ -308,7 +387,7 @@ function TripCard({ trip, onOpen, onEdit, onDelete }) {
       }}>
         {!trip.coverPhoto && <FloatingShapes />}
         <span style={{
-          position: 'relative', zIndex: 1, fontSize: 12, fontWeight: 800, padding: '4px 11px',
+          position: 'relative', zIndex: 1, fontSize: 12, fontWeight: 600, padding: '4px 11px',
           borderRadius: 999, background: sc.bg, color: sc.fg,
         }}>{trip.status}</span>
         <div style={{ position: 'relative', zIndex: 1, display: 'flex', gap: 4 }}>
@@ -317,7 +396,7 @@ function TripCard({ trip, onOpen, onEdit, onDelete }) {
         </div>
       </div>
       <div style={{ padding: '14px 16px' }}>
-        <div style={{ fontWeight: 800, fontSize: 16.5, marginBottom: 2 }}>{trip.name}</div>
+        <div style={{ fontWeight: 600, fontSize: 16.5, marginBottom: 2 }}>{trip.name}</div>
         <div style={{ fontSize: 13, color: 'var(--kumo-text-soft)', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
           <MapPin size={13} /> {trip.destination || 'No destination set'}
         </div>
@@ -456,13 +535,13 @@ function TripDashboard({ data, setData, trip, onNavigate, onImport }) {
             <Pill color={(STATUS_COLORS[trip.status]||{}).bg}>{trip.status}</Pill>
             {trip.destination && <Pill icon={MapPin}>{trip.destination}</Pill>}
           </div>
-          <h1 style={{ margin: '4px 0 6px', fontSize: 28, fontWeight: 800, letterSpacing: -0.4 }}>{trip.name}</h1>
+          <h1 style={{ margin: '4px 0 6px', fontSize: 28, fontWeight: 600, letterSpacing: -0.4 }}>{trip.name}</h1>
           <div style={{ fontSize: 14, color: 'var(--kumo-text-soft)', fontWeight: 600 }}>
             {trip.startDate ? `${fmtDate(trip.startDate)} – ${fmtDate(trip.endDate)}` : 'Dates not set'}
           </div>
           {trip.description && <p style={{ maxWidth: 560, marginTop: 10, fontSize: 14, lineHeight: 1.6 }}>{trip.description}</p>}
           {daysUntil !== null && daysUntil >= 0 && (
-            <div style={{ marginTop: 10, fontWeight: 800, fontSize: 14, color: 'var(--kumo-primary-text)' }}>
+            <div style={{ marginTop: 10, fontWeight: 600, fontSize: 14, color: 'var(--kumo-primary-text)' }}>
               {daysUntil === 0 ? "Today's the day! ✈️" : `${daysUntil} day${daysUntil === 1 ? '' : 's'} until departure`}
             </div>
           )}
@@ -472,7 +551,7 @@ function TripDashboard({ data, setData, trip, onNavigate, onImport }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 20 }}>
         <Card onClick={() => onNavigate('finances')}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Budget</div>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>{currencyFmt(totalSpent, trip.currency)}</div>
+          <div style={{ fontSize: 21, fontWeight: 600 }}>{currencyFmt(totalSpent, trip.currency)}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)' }}>of {currencyFmt(trip.budget, trip.currency)}</div>
           <div style={{ height: 6, background: 'var(--kumo-soft)', borderRadius: 999, marginTop: 8, overflow: 'hidden' }}>
             <div style={{ width: `${budgetPct}%`, height: '100%', background: budgetPct > 90 ? '#E2A39A' : 'var(--kumo-primary)', borderRadius: 999 }} />
@@ -480,24 +559,24 @@ function TripDashboard({ data, setData, trip, onNavigate, onImport }) {
         </Card>
         <Card onClick={() => onNavigate('itinerary')}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Cities</div>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>{citiesVisited.length}</div>
+          <div style={{ fontSize: 21, fontWeight: 600 }}>{citiesVisited.length}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)' }}>{citiesVisited.join(', ') || 'No itinerary yet'}</div>
         </Card>
         <Card onClick={() => onNavigate('itinerary')}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Trip progress</div>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>{tripProgress}%</div>
+          <div style={{ fontSize: 21, fontWeight: 600 }}>{tripProgress}%</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)' }}>{completedDays} of {days.length} days planned</div>
         </Card>
         <Card onClick={() => onNavigate('places')}>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Places saved</div>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>{places.length}</div>
+          <div style={{ fontSize: 21, fontWeight: 600 }}>{places.length}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)' }}>{places.filter(p=>p.status==='Visited').length} visited</div>
         </Card>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 1fr', gap: 16 }} className="kumo-dash-grid">
         <Card>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Clock size={16} /> Upcoming reservations
           </div>
           {upcoming.length === 0 ? (
@@ -523,7 +602,7 @@ function TripDashboard({ data, setData, trip, onNavigate, onImport }) {
         </Card>
 
         <Card>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 10, display: 'flex', alignItems: 'center', gap: 6 }}>
             <Camera size={16} /> Recent memories
           </div>
           {recentMemories.length === 0 ? (
@@ -636,7 +715,7 @@ function ActivityRow({ activity, place, onToggle, onEdit, onDelete, dragHandlePr
       </button>
       <div style={{ flex: 1, minWidth: 0 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          {activity.time && <span style={{ fontSize: 12, fontWeight: 800, color: 'var(--kumo-primary-text)' }}>{activity.time}</span>}
+          {activity.time && <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--kumo-primary-text)' }}>{activity.time}</span>}
           <span style={{ fontWeight: 700, fontSize: 14.5, textDecoration: activity.completed ? 'line-through' : 'none' }}>{activity.title}</span>
           {place && <Pill icon={MapPin}>{place.name}</Pill>}
         </div>
@@ -690,7 +769,7 @@ function DayCard({ day, activities, places, onUpdateDay, onDeleteDay, onAddActiv
             {day.completed && <Check size={15} color="#fff" />}
           </button>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15.5 }}>
+            <div style={{ fontWeight: 600, fontSize: 15.5 }}>
               {fmtWeekday(day.date)}, {fmtDate(day.date)}
             </div>
             {day.city && <div style={{ fontSize: 12.5, color: 'var(--kumo-primary-text)', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 4 }}><MapPin size={12} />{day.city}</div>}
@@ -834,8 +913,8 @@ function ItineraryPage({ data, setData, trip }) {
             const acts = activitiesByDay(day.id);
             return (
               <Card key={day.id} style={{ padding: '12px 14px' }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: 'var(--kumo-primary-text)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{fmtWeekday(day.date)}</div>
-                <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 4 }}>{fmtDateShort(day.date)}</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--kumo-primary-text)', textTransform: 'uppercase', letterSpacing: 0.5 }}>{fmtWeekday(day.date)}</div>
+                <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 4 }}>{fmtDateShort(day.date)}</div>
                 {day.city && <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>{day.city}</div>}
                 {acts.slice(0,3).map(a => (
                   <div key={a.id} style={{ fontSize: 11.5, padding: '2px 0', color: a.completed ? 'var(--kumo-text-soft)' : 'var(--kumo-text)', textDecoration: a.completed ? 'line-through' : 'none' }}>
@@ -956,7 +1035,7 @@ function PlaceCard({ place, onEdit, onDelete, onStatusChange }) {
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 15.5, marginBottom: 2 }}>{place.name}</div>
+          <div style={{ fontWeight: 600, fontSize: 15.5, marginBottom: 2 }}>{place.name}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
             <Pill>{place.customCategory || place.category}</Pill>
             {place.city && <span><MapPin size={11} style={{ verticalAlign: -1 }} /> {place.city}</span>}
@@ -1144,7 +1223,7 @@ function HotelCard({ hotel, onEdit, onDelete, onCopy }) {
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontWeight: 800, fontSize: 16 }}>{hotel.name}</div>
+          <div style={{ fontWeight: 600, fontSize: 16 }}>{hotel.name}</div>
           {hotel.address && <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', marginTop: 2 }}>{hotel.address}</div>}
         </div>
         <div style={{ display: 'flex', gap: 2 }}>
@@ -1297,7 +1376,7 @@ function TransportCard({ item, onEdit, onDelete }) {
             <Icon size={18} color="var(--kumo-primary-text)" />
           </div>
           <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 800, fontSize: 15 }}>{item.departure} <ChevronRight size={14} style={{ verticalAlign: -2 }} /> {item.arrival}</div>
+            <div style={{ fontWeight: 600, fontSize: 15 }}>{item.departure} <ChevronRight size={14} style={{ verticalAlign: -2 }} /> {item.arrival}</div>
             <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)' }}>
               {item.type}{item.date && ` · ${fmtDate(item.date)}`}{item.time && ` · ${item.time}`}
             </div>
@@ -1425,7 +1504,7 @@ function RoutesPage({ data, setData, trip }) {
             <Card key={r.id}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 800, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                  <div style={{ fontWeight: 600, fontSize: 15, display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
                     <Footprints size={15} color="var(--kumo-primary-text)" /> {r.from} <ChevronRight size={14} /> {r.to}
                   </div>
                   <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', marginTop: 4 }}>
@@ -1520,7 +1599,7 @@ function DocCard({ doc, onEdit, onDelete }) {
         {isImage ? <img src={doc.fileData} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <FileText size={32} color="var(--kumo-primary-text)" />}
       </div>
       <div style={{ padding: '10px 12px' }}>
-        <div style={{ fontWeight: 800, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
+        <div style={{ fontWeight: 600, fontSize: 13.5, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.name}</div>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
           <Pill>{doc.category}</Pill>
           <div style={{ display: 'flex', gap: 0 }}>
@@ -1725,7 +1804,7 @@ function FinancesPage({ data, setData, trip }) {
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Budget</div>
           <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
             <input type="number" min="0" step="0.01" value={trip.budget || ''} onChange={e => updateBudget(e.target.value)}
-              style={{ ...inputStyle, fontSize: 19, fontWeight: 800, padding: '4px 8px', width: 0, flex: '1 1 70px', minWidth: 70 }} />
+              style={{ ...inputStyle, fontSize: 19, fontWeight: 600, padding: '4px 8px', width: 0, flex: '1 1 70px', minWidth: 70 }} />
             <select value={trip.currency} onChange={e => updateCurrency(e.target.value)} style={{ ...inputStyle, width: 'auto', fontSize: 12, padding: '4px 6px', flex: '0 0 auto', maxWidth: '100%' }}>
               {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
             </select>
@@ -1733,24 +1812,24 @@ function FinancesPage({ data, setData, trip }) {
         </Card>
         <Card>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Spent (actual)</div>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>{currencyFmt(totalActual, trip.currency)}</div>
+          <div style={{ fontSize: 21, fontWeight: 600 }}>{currencyFmt(totalActual, trip.currency)}</div>
           <div style={{ height: 6, background: 'var(--kumo-soft)', borderRadius: 999, marginTop: 8, overflow: 'hidden' }}>
             <div style={{ width: `${budgetPct}%`, height: '100%', background: budgetPct > 90 ? '#E2A39A' : 'var(--kumo-primary)', borderRadius: 999 }} />
           </div>
         </Card>
         <Card>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Remaining</div>
-          <div style={{ fontSize: 21, fontWeight: 800, color: remaining < 0 ? '#C75C4A' : 'var(--kumo-text)' }}>{currencyFmt(remaining, trip.currency)}</div>
+          <div style={{ fontSize: 21, fontWeight: 600, color: remaining < 0 ? '#C75C4A' : 'var(--kumo-text)' }}>{currencyFmt(remaining, trip.currency)}</div>
         </Card>
         <Card>
           <div style={{ fontSize: 12.5, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 6 }}>Planned costs</div>
-          <div style={{ fontSize: 21, fontWeight: 800 }}>{currencyFmt(totalPlanned, trip.currency)}</div>
+          <div style={{ fontSize: 21, fontWeight: 600 }}>{currencyFmt(totalPlanned, trip.currency)}</div>
         </Card>
       </div>
 
       {byCategory.length > 0 && (
         <Card style={{ marginBottom: 18 }}>
-          <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Category breakdown</div>
+          <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Category breakdown</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {byCategory.map((c, i) => (
               <div key={c.cat}>
@@ -1782,7 +1861,7 @@ function FinancesPage({ data, setData, trip }) {
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10 }}>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 800, fontSize: 15 }}>{currencyFmt(e.amount, e.currency)}</span>
+                    <span style={{ fontWeight: 600, fontSize: 15 }}>{currencyFmt(e.amount, e.currency)}</span>
                     <Pill>{e.category}</Pill>
                     {e.planned && <Pill color="#F6E9D8">Planned</Pill>}
                     <span style={{ fontSize: 12, color: 'var(--kumo-text-soft)' }}>{fmtDateShort(e.date)} · {e.payment}</span>
@@ -1898,7 +1977,7 @@ function MemoryFormModal({ memory, tripId, places, onSave, onClose }) {
         </div>
         <TextArea label="Notes" value={form.notes} onChange={e => set('notes', e.target.value)} placeholder="What happened? What did it feel like?" />
         <div style={{ background: 'var(--kumo-soft)', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontWeight: 800, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}><Sparkles size={14} /> Reflection prompts</div>
+          <div style={{ fontWeight: 600, fontSize: 13.5, display: 'flex', alignItems: 'center', gap: 6 }}><Sparkles size={14} /> Reflection prompts</div>
           <TextArea label="What made this memorable?" value={form.promptMemorable} onChange={e => set('promptMemorable', e.target.value)} style={{ minHeight: 50 }} />
           <TextArea label="Would you come back?" value={form.promptReturn} onChange={e => set('promptReturn', e.target.value)} style={{ minHeight: 50 }} />
           <TextArea label="What surprised you?" value={form.promptSurprised} onChange={e => set('promptSurprised', e.target.value)} style={{ minHeight: 50 }} />
@@ -1936,7 +2015,7 @@ function MemoryCard({ memory, onEdit, onDelete, onOpen }) {
         </div>
       </div>
       <div style={{ padding: '12px 14px' }}>
-        <div style={{ fontWeight: 800, fontSize: 15 }}>{memory.title}</div>
+        <div style={{ fontWeight: 600, fontSize: 15 }}>{memory.title}</div>
         <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginTop: 2 }}>{fmtDate(memory.date)}{memory.location ? ` · ${memory.location}` : ''}</div>
         {memory.rating > 0 && <div style={{ marginTop: 6 }}><StarRating value={memory.rating} size={14} /></div>}
         {memory.tags && memory.tags.length > 0 && (
@@ -1966,10 +2045,10 @@ function MemoryDetailModal({ memory, onClose }) {
       {memory.notes && <p style={{ lineHeight: 1.7, fontSize: 14.5 }}>{memory.notes}</p>}
       {(memory.promptMemorable || memory.promptReturn || memory.promptSurprised || memory.promptFutureMe) && (
         <div style={{ background: 'var(--kumo-soft)', borderRadius: 14, padding: 12, marginTop: 10, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {memory.promptMemorable && <div><div style={{ fontWeight: 800, fontSize: 12.5 }}>What made this memorable?</div><div style={{ fontSize: 13.5 }}>{memory.promptMemorable}</div></div>}
-          {memory.promptReturn && <div><div style={{ fontWeight: 800, fontSize: 12.5 }}>Would you come back?</div><div style={{ fontSize: 13.5 }}>{memory.promptReturn}</div></div>}
-          {memory.promptSurprised && <div><div style={{ fontWeight: 800, fontSize: 12.5 }}>What surprised you?</div><div style={{ fontSize: 13.5 }}>{memory.promptSurprised}</div></div>}
-          {memory.promptFutureMe && <div><div style={{ fontWeight: 800, fontSize: 12.5 }}>For future you</div><div style={{ fontSize: 13.5 }}>{memory.promptFutureMe}</div></div>}
+          {memory.promptMemorable && <div><div style={{ fontWeight: 600, fontSize: 12.5 }}>What made this memorable?</div><div style={{ fontSize: 13.5 }}>{memory.promptMemorable}</div></div>}
+          {memory.promptReturn && <div><div style={{ fontWeight: 600, fontSize: 12.5 }}>Would you come back?</div><div style={{ fontSize: 13.5 }}>{memory.promptReturn}</div></div>}
+          {memory.promptSurprised && <div><div style={{ fontWeight: 600, fontSize: 12.5 }}>What surprised you?</div><div style={{ fontSize: 13.5 }}>{memory.promptSurprised}</div></div>}
+          {memory.promptFutureMe && <div><div style={{ fontWeight: 600, fontSize: 12.5 }}>For future you</div><div style={{ fontSize: 13.5 }}>{memory.promptFutureMe}</div></div>}
         </div>
       )}
       {memory.futureNote && (
@@ -2037,7 +2116,7 @@ function MemoriesPage({ data, setData, trip }) {
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                     <div>
-                      <div style={{ fontWeight: 800, fontSize: 15 }}>{m.title}</div>
+                      <div style={{ fontWeight: 600, fontSize: 15 }}>{m.title}</div>
                       <div style={{ fontSize: 12, color: 'var(--kumo-text-soft)' }}>{fmtDate(m.date)}{m.location ? ` · ${m.location}` : ''}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 2 }}>
@@ -2107,11 +2186,11 @@ function JournalPage({ data, trip }) {
         {entries.map(({ day, dayMemories, dayExpenses, dayActivities }, idx) => (
           <Card key={day.id}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--kumo-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 14, color: 'var(--kumo-primary-text)' }}>
+              <div style={{ width: 38, height: 38, borderRadius: 12, background: 'var(--kumo-soft)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 600, fontSize: 14, color: 'var(--kumo-primary-text)' }}>
                 {idx + 1}
               </div>
               <div>
-                <div style={{ fontWeight: 800, fontSize: 16 }}>{fmtWeekday(day.date)}, {fmtDate(day.date)}</div>
+                <div style={{ fontWeight: 600, fontSize: 16 }}>{fmtWeekday(day.date)}, {fmtDate(day.date)}</div>
                 {day.city && <div style={{ fontSize: 12.5, color: 'var(--kumo-primary-text)', fontWeight: 700 }}>{day.city}</div>}
               </div>
             </div>
@@ -2132,7 +2211,7 @@ function JournalPage({ data, trip }) {
                     {m.photos.map((p,i) => <img key={i} src={p} alt="" style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />)}
                   </div>
                 )}
-                <div style={{ fontWeight: 800, fontSize: 14.5 }}>{m.title}</div>
+                <div style={{ fontWeight: 600, fontSize: 14.5 }}>{m.title}</div>
                 {m.rating > 0 && <div style={{ margin: '4px 0' }}><StarRating value={m.rating} size={14} /></div>}
                 {m.notes && <p style={{ fontSize: 14, lineHeight: 1.7, fontStyle: 'italic', margin: '6px 0' }}>&ldquo;{m.notes}&rdquo;</p>}
               </div>
@@ -2148,7 +2227,7 @@ function JournalPage({ data, trip }) {
           const ms = memories.filter(m => m.date === date);
           return (
             <Card key={date}>
-              <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 8 }}>{fmtWeekday(date)}, {fmtDate(date)}</div>
+              <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 8 }}>{fmtWeekday(date)}, {fmtDate(date)}</div>
               {ms.map(m => (
                 <div key={m.id} style={{ marginBottom: 8 }}>
                   {m.photos && m.photos.length > 0 && (
@@ -2156,7 +2235,7 @@ function JournalPage({ data, trip }) {
                       {m.photos.map((p,i) => <img key={i} src={p} alt="" style={{ width: 100, height: 100, objectFit: 'cover', borderRadius: 10, flexShrink: 0 }} />)}
                     </div>
                   )}
-                  <div style={{ fontWeight: 800, fontSize: 14.5 }}>{m.title}</div>
+                  <div style={{ fontWeight: 600, fontSize: 14.5 }}>{m.title}</div>
                   {m.rating > 0 && <div style={{ margin: '4px 0' }}><StarRating value={m.rating} size={14} /></div>}
                   {m.notes && <p style={{ fontSize: 14, lineHeight: 1.7, fontStyle: 'italic', margin: '6px 0' }}>&ldquo;{m.notes}&rdquo;</p>}
                 </div>
@@ -2181,7 +2260,10 @@ function PassportPage({ data }) {
   const allMemories = data.memories;
   const allTransport = data.transport;
 
-  const countries = [...new Set(trips.map(t => t.destination).filter(Boolean))];
+  // Merge countries from trips + onboarding answers (settings.visitedCountries)
+  const fromTrips = trips.map(t => t.destination).filter(Boolean);
+  const fromOnboarding = data.settings?.visitedCountries || [];
+  const countries = [...new Set([...fromOnboarding, ...fromTrips])];
   const cities = [...new Set(allDays.map(d => d.city).filter(Boolean))];
 
   // Achievement progress calculations
@@ -2212,32 +2294,32 @@ function PassportPage({ data }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 24 }}>
         <Card style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>{countries.length}</div>
+          <div style={{ fontSize: 28, fontWeight: 600 }}>{countries.length}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', fontWeight: 700 }}>Countries</div>
         </Card>
         <Card style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>{cities.length}</div>
+          <div style={{ fontSize: 28, fontWeight: 600 }}>{cities.length}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', fontWeight: 700 }}>Cities</div>
         </Card>
         <Card style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>{completedTrips.length}</div>
+          <div style={{ fontSize: 28, fontWeight: 600 }}>{completedTrips.length}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', fontWeight: 700 }}>Trips completed</div>
         </Card>
         <Card style={{ textAlign: 'center' }}>
-          <div style={{ fontSize: 28, fontWeight: 800 }}>{memoryCount}</div>
+          <div style={{ fontSize: 28, fontWeight: 600 }}>{memoryCount}</div>
           <div style={{ fontSize: 12.5, color: 'var(--kumo-text-soft)', fontWeight: 700 }}>Memories</div>
         </Card>
       </div>
 
       {cities.length > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 10 }}>City stamps</div>
+          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>City stamps</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {cities.map(city => (
               <div key={city} style={{
                 width: 84, height: 84, borderRadius: '50%', border: '3px dashed var(--kumo-primary)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-                fontSize: 12, fontWeight: 800, color: 'var(--kumo-primary-text)', padding: 6,
+                fontSize: 12, fontWeight: 600, color: 'var(--kumo-primary-text)', padding: 6,
                 background: 'var(--kumo-soft)', transform: `rotate(${(city.length % 5) - 2}deg)`,
               }}>
                 {city}
@@ -2249,13 +2331,13 @@ function PassportPage({ data }) {
 
       {countries.length > 0 && (
         <div style={{ marginBottom: 24 }}>
-          <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 10 }}>Country stamps</div>
+          <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>Country stamps</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
             {countries.map(c => (
               <div key={c} style={{
                 width: 100, height: 70, borderRadius: 12, border: '2px solid var(--kumo-accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center',
-                fontSize: 13, fontWeight: 800, color: '#9C5A3E', padding: 6,
+                fontSize: 13, fontWeight: 600, color: '#9C5A3E', padding: 6,
                 background: '#FBEAE2', transform: `rotate(${(c.length % 4) - 2}deg)`,
               }}>
                 {c}
@@ -2266,7 +2348,7 @@ function PassportPage({ data }) {
       )}
 
       <div>
-        <div style={{ fontWeight: 800, fontSize: 16, marginBottom: 10 }}>Achievements</div>
+        <div style={{ fontWeight: 600, fontSize: 16, marginBottom: 10 }}>Achievements</div>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 12 }}>
           {ACHIEVEMENTS.map(a => {
             const { current, target } = progressFor(a.id);
@@ -2277,7 +2359,7 @@ function PassportPage({ data }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                   <div style={{ fontSize: 28, filter: done ? 'none' : 'grayscale(1) opacity(0.5)' }}>{a.icon}</div>
                   <div>
-                    <div style={{ fontWeight: 800, fontSize: 14 }}>{a.name}</div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{a.name}</div>
                     <div style={{ fontSize: 11.5, color: 'var(--kumo-text-soft)' }}>{a.desc}</div>
                   </div>
                 </div>
@@ -2351,7 +2433,7 @@ function SyncSection({ data, setData, onOpenAuth }) {
 
   return (
     <Card style={{ marginBottom: 16 }}>
-      <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
+      <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
         <Cloud size={16} /> Account &amp; sync
       </div>
 
@@ -2373,10 +2455,10 @@ function SyncSection({ data, setData, onOpenAuth }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14, flexWrap: 'wrap' }}>
             <div style={{ width: 38, height: 38, borderRadius: '50%', background: 'var(--kumo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <span style={{ color: '#fff', fontWeight: 800, fontSize: 15 }}>{(user.email || '?')[0].toUpperCase()}</span>
+              <span style={{ color: '#fff', fontWeight: 600, fontSize: 15 }}>{(user.email || '?')[0].toUpperCase()}</span>
             </div>
             <div>
-              <div style={{ fontWeight: 800, fontSize: 14 }}>Signed in as {user.email}</div>
+              <div style={{ fontWeight: 600, fontSize: 14 }}>Signed in as {user.email}</div>
               <div style={{ fontSize: 12, color: '#3F8C7E', fontWeight: 700 }}>☁ Cloud sync active</div>
             </div>
             <Btn variant="ghost" size="sm" onClick={handleSignOut} style={{ marginLeft: 'auto' }}>Sign out</Btn>
@@ -2450,7 +2532,7 @@ function SettingsPage({ data, setData, onOpenAuth }) {
       <SyncSection data={data} setData={setData} onOpenAuth={onOpenAuth} />
 
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Appearance</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Appearance</div>
         <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--kumo-text-soft)', marginBottom: 8 }}>Color theme</div>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           {PASTEL_THEMES.map(theme => (
@@ -2469,7 +2551,7 @@ function SettingsPage({ data, setData, onOpenAuth }) {
       </Card>
 
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Preferences</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Preferences</div>
         <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <Input label="Your name" value={data.settings.name} onChange={e => set('name', e.target.value)} style={{ maxWidth: 220 }} />
           <Select label="Default currency" value={data.settings.defaultCurrency} onChange={e => set('defaultCurrency', e.target.value)} style={{ maxWidth: 160 }}>
@@ -2480,33 +2562,7 @@ function SettingsPage({ data, setData, onOpenAuth }) {
       </Card>
 
       <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 6 }}>
-          <Sparkles size={16} /> AI-assisted import (optional)
-        </div>
-        <p style={{ fontSize: 13, color: 'var(--kumo-text-soft)', marginTop: 0, lineHeight: 1.6 }}>
-          When importing an Excel/CSV itinerary (from a trip's "Import from Excel" button),
-          Kumo automatically suggests how to map your columns. For trickier spreadsheets, you
-          can add your own Anthropic API key here to let Claude refine that mapping.
-        </p>
-        <Input
-          label="Anthropic API key"
-          type="password"
-          value={data.settings.anthropicApiKey || ''}
-          onChange={e => set('anthropicApiKey', e.target.value)}
-          placeholder="sk-ant-..."
-          style={{ maxWidth: 360 }}
-        />
-        <p style={{ fontSize: 12, color: 'var(--kumo-text-soft)', marginTop: 8 }}>
-          Stored only in your browser's local storage. When used, your spreadsheet headers and a
-          few sample rows are sent directly from your browser to Anthropic's API — never to Kumo
-          or any other server. Leave this blank to use the built-in offline mapping only.
-        </p>
-      </Card>
-
-      
-
-      <Card style={{ marginBottom: 16 }}>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Import & export</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 12 }}>Import & export</div>
         <p style={{ fontSize: 13, color: 'var(--kumo-text-soft)', marginTop: 0 }}>Back up your entire travel archive, or restore from a previous export.</p>
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Btn icon={Download} variant="secondary" onClick={exportAll}>Export full archive (JSON)</Btn>
@@ -2520,7 +2576,7 @@ function SettingsPage({ data, setData, onOpenAuth }) {
       </Card>
 
       <Card>
-        <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 8 }}>About Kumo</div>
+        <div style={{ fontWeight: 600, fontSize: 15, marginBottom: 8 }}>About Kumo</div>
         <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', lineHeight: 1.6, marginTop: 0 }}>
           Kumo is your personal travel operating system — for planning trips, organizing logistics, tracking finances,
           and building a lifelong archive of memories. Not just where trips are planned, but where they're remembered.
@@ -2551,6 +2607,13 @@ export default function KumoApp() {
   const [showMore, setShowMore] = useState(false);
   const [showImport, setShowImport] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    try {
+      return !window.localStorage.getItem('kumo-onboarding-done');
+    } catch {
+      return true;
+    }
+  });
   const [isMobile, setIsMobile] = useState(typeof window !== 'undefined' ? window.innerWidth < 820 : false);
   const [syncBanner, setSyncBanner] = useState(null); // { cloudData, updatedAtMs }
   const [syncReady, setSyncReady] = useState(false);
@@ -2687,7 +2750,7 @@ export default function KumoApp() {
 
   if (!loaded || !data) {
     return (
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Nunito, sans-serif', color: '#888' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', fontFamily: 'Inter, system-ui, sans-serif', color: '#888' }}>
         Loading Kumo...
       </div>
     );
@@ -2770,11 +2833,11 @@ export default function KumoApp() {
   return (
     <div style={{
       ...cssVars,
-      fontFamily: 'Nunito, sans-serif', background: 'var(--kumo-surface)', color: 'var(--kumo-text)',
+      fontFamily: 'Inter, system-ui, sans-serif', background: 'var(--kumo-surface)', color: 'var(--kumo-text)',
       minHeight: '100vh', display: 'flex',
     }}>
       <style>{`
-        select, input, textarea, button { font-family: 'Nunito', sans-serif; }
+        select, input, textarea, button { font-family: 'Inter', system-ui, sans-serif; }
       `}</style>
 
       {!isMobile && (
@@ -2788,7 +2851,15 @@ export default function KumoApp() {
       )}
 
       <div style={{ flex: 1, minWidth: 0, paddingBottom: isMobile ? 70 : 0 }}>
-        {isMobile && <MobileTopBar title={pageTitle} onMenu={() => setShowMore(true)} />}
+        {isMobile && (
+          <MobileTopBar
+            title={pageTitle}
+            onMenu={() => setShowMore(true)}
+            user={data.settings.cloudSync?.currentUser || null}
+            onAccount={() => navigate('settings')}
+            onSignIn={() => setShowAuth(true)}
+          />
+        )}
 
         <div style={{ padding: isMobile ? '16px' : '28px 32px', maxWidth: 1200, margin: '0 auto' }}>
           {syncBanner && (
@@ -2815,7 +2886,15 @@ export default function KumoApp() {
       </div>
 
       {isMobile && <MobileBottomNav active={activePage} onNavigate={navigate} onMore={() => setShowMore(true)} />}
-      {isMobile && showMore && <MoreMenu active={activePage} onNavigate={navigate} onClose={() => setShowMore(false)} />}
+      {isMobile && showMore && (
+        <MoreMenu
+          active={activePage}
+          onNavigate={navigate}
+          onClose={() => setShowMore(false)}
+          user={data.settings.cloudSync?.currentUser || null}
+          onSignIn={() => setShowAuth(true)}
+        />
+      )}
       {showImport && selectedTrip && (
         <ImportWizard trip={selectedTrip} data={data} setData={setData} onClose={() => setShowImport(false)} />
       )}
@@ -2823,6 +2902,24 @@ export default function KumoApp() {
         <AuthModal
           onConnected={handleConnected}
           onClose={() => setShowAuth(false)}
+        />
+      )}
+      {showOnboarding && (
+        <Onboarding
+          onComplete={(payload) => {
+            setShowOnboarding(false);
+            if (payload) {
+              setData(d => ({
+                ...d,
+                settings: {
+                  ...d.settings,
+                  travelStyle: payload.travelStyle || d.settings.travelStyle,
+                  visitedCountries: payload.visitedCountries || d.settings.visitedCountries || [],
+                },
+              }));
+            }
+          }}
+          onSignIn={() => setShowAuth(true)}
         />
       )}
     </div>
