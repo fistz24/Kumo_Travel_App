@@ -105,15 +105,24 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
       </nav>
       <div style={{ borderTop: '1px solid var(--kumo-soft)', paddingTop: 12, marginTop: 8 }}>
         {user ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 12, background: 'var(--kumo-soft)' }}>
+          <button
+            type="button"
+            onClick={() => onNavigate('settings')}
+            title="Account settings"
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px',
+              borderRadius: 12, background: 'var(--kumo-soft)', border: 'none', cursor: 'pointer',
+              fontFamily: 'Nunito, sans-serif', textAlign: 'left',
+            }}
+          >
             <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'var(--kumo-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
               <span style={{ color: '#fff', fontWeight: 800, fontSize: 12 }}>{(user.email || '?')[0].toUpperCase()}</span>
             </div>
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 11.5, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user.email}</div>
-              <div style={{ fontSize: 10.5, color: '#3F8C7E', fontWeight: 700 }}>☁ Synced</div>
+              <div style={{ fontSize: 11.5, fontWeight: 800, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--kumo-text)' }}>{user.email}</div>
+              <div style={{ fontSize: 10.5, color: '#3F8C7E', fontWeight: 700 }}>Account · Synced</div>
             </div>
-          </div>
+          </button>
         ) : (
           <button onClick={onSignIn} style={{
             width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '9px 12px',
@@ -121,7 +130,7 @@ function Sidebar({ active, onNavigate, tripName, user, onSignIn }) {
             cursor: 'pointer', fontFamily: 'Nunito, sans-serif', fontWeight: 700, fontSize: 13.5,
             color: 'var(--kumo-text-soft)', textAlign: 'left',
           }}>
-            <LogIn size={16} /> Sign in to sync
+            <LogIn size={16} /> Sign in
           </button>
         )}
       </div>
@@ -2343,19 +2352,21 @@ function SyncSection({ data, setData, onOpenAuth }) {
   return (
     <Card style={{ marginBottom: 16 }}>
       <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 6, display: 'flex', alignItems: 'center', gap: 6 }}>
-        <Cloud size={16} /> Sync across devices (free)
+        <Cloud size={16} /> Account &amp; sync
       </div>
 
       {!user ? (
         /* ── Not signed in ── */
         <div>
           <p style={{ fontSize: 13.5, color: 'var(--kumo-text-soft)', marginTop: 0, lineHeight: 1.7 }}>
-            Your trips currently live only in this browser. Sign in to access them on any device — phone, tablet, or another computer.
+            Your trips are saved only on this device right now. Sign in to keep them in your account and open them on any phone, tablet, or computer.
           </p>
-          <div style={{ background: 'var(--kumo-soft)', borderRadius: 14, padding: '12px 16px', marginBottom: 14, fontSize: 13, lineHeight: 1.7, color: 'var(--kumo-text-soft)' }}>
-            <strong style={{ color: 'var(--kumo-text)' }}>How it works:</strong> Kumo uses your own free Firebase account (Google's free backend service) to store your data securely. Setup takes about 5 minutes and needs no credit card. The in-app guide walks you through every click.
-          </div>
-          <Btn icon={LogIn} onClick={onOpenAuth}>Sign in / Set up sync</Btn>
+          <ul style={{ margin: '0 0 14px', paddingLeft: 18, fontSize: 13, color: 'var(--kumo-text-soft)', lineHeight: 1.7 }}>
+            <li>Sync trips across devices</li>
+            <li>Sign in with Google or email</li>
+            <li>Free — no credit card</li>
+          </ul>
+          <Btn icon={LogIn} onClick={onOpenAuth}>Sign in</Btn>
         </div>
       ) : (
         /* ── Signed in ── */
@@ -2434,7 +2445,9 @@ function SettingsPage({ data, setData, onOpenAuth }) {
 
   return (
     <div>
-      <PageHeader title="Settings" subtitle="Personalize Kumo to fit your travel style" />
+      <PageHeader title="Settings" subtitle="Account, sync, and preferences" />
+
+      <SyncSection data={data} setData={setData} onOpenAuth={onOpenAuth} />
 
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Appearance</div>
@@ -2490,7 +2503,7 @@ function SettingsPage({ data, setData, onOpenAuth }) {
         </p>
       </Card>
 
-      <SyncSection data={data} setData={setData} onOpenAuth={onOpenAuth} />
+      
 
       <Card style={{ marginBottom: 16 }}>
         <div style={{ fontWeight: 800, fontSize: 15, marginBottom: 12 }}>Import & export</div>
@@ -2808,7 +2821,6 @@ export default function KumoApp() {
       )}
       {showAuth && (
         <AuthModal
-          savedConfigRaw={data.settings.cloudSync?.firebaseConfigRaw || ''}
           onConnected={handleConnected}
           onClose={() => setShowAuth(false)}
         />
